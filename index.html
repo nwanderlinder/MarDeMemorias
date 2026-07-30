@@ -87,6 +87,69 @@
     .drawing-workspace > .flex-grow { grid-column: 1; grid-row: 1; min-width: 0; }
     .drawing-preview-side { grid-column: 2; grid-row: 1; width: 100%; margin: 0; min-width: 0; }
     .drawing-preview-side img { width: 100%; max-height: 180px; object-fit: contain; }
+    .memory-board-shell { height: 94vh; min-height: 0; }
+    .drawing-workspace { flex: 1 1 auto; min-height: 0; }
+    .drawing-workspace > .flex-grow { min-height: 0; }
+    .drawing-scroll-area { width: 100%; max-height: none; flex: 1 1 auto; min-height: 0; overflow: auto; padding: .25rem; }
+    .drawing-scroll-area .draw-stage { margin-inline: auto; }
+    .memory-board-shell { overflow-y: auto; overflow-x: hidden; }
+    .drawing-share-footer { position: sticky; bottom: 0; z-index: 25; padding-top: .75rem; background: linear-gradient(to bottom, transparent, rgba(10,6,24,.96) 28%); }
+    .tutorial-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .tutorial-panel { border-radius: 1.25rem; padding: 1rem; border: 1px solid rgba(255,255,255,.12); background: rgba(15,10,32,.72); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+    .tutorial-panel:first-child { border-color: rgba(34,211,238,.35); background: linear-gradient(145deg, rgba(8,47,73,.55), rgba(15,10,32,.72)); }
+    .tutorial-panel:last-child { border-color: rgba(168,85,247,.35); background: linear-gradient(145deg, rgba(59,7,100,.42), rgba(15,10,32,.72)); }
+    .tutorial-panel li::marker { color: #67e8f9; font-weight: 700; }
+    .tutorial-panel:last-child li::marker { color: #d8b4fe; }
+    .tutorial-panel:last-child ol li:last-child { list-style: none; margin-top: .65rem; font-weight: 500; color: #e2e8f0; }
+    @media (max-width: 640px) { .tutorial-panels { grid-template-columns: 1fr; } }
+
+    /* Distribución estable del panel de dibujo: filas reservadas y una sola zona flexible. */
+    #memoryBoardModal { padding: clamp(6px, 2vw, 24px); }
+    .memory-board-shell {
+      width: min(96vw, 1120px);
+      height: min(94dvh, 900px);
+      max-height: none;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      gap: clamp(.45rem, 1.2vh, .85rem);
+      overflow: hidden;
+      padding: clamp(.75rem, 2vw, 2rem);
+    }
+    .memory-board-shell > .drawing-workspace {
+      display: block;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    .memory-board-shell > .drawing-workspace > .flex-grow {
+      height: 100%;
+      min-height: 0;
+      margin: 0;
+    }
+    .drawing-toolbar { flex: 0 0 auto; min-height: 2.25rem; }
+    .drawing-scroll-area {
+      height: calc(100% - 2.75rem);
+      max-height: none;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+    }
+    .drawing-scroll-area .draw-stage {
+      width: min(100%, 760px, max(280px, calc((94dvh - 330px) * 1.3333)));
+      flex: 0 0 auto;
+    }
+    .drawing-share-footer { position: relative; bottom: auto; min-height: 2.75rem; }
+    @media (max-width: 640px) {
+      .memory-board-shell { width: 98vw; height: 96dvh; padding: .75rem; gap: .45rem; }
+      .memory-board-shell > .flex.flex-col.gap-1 { padding-bottom: .45rem; }
+      .drawing-toolbar { align-items: flex-start; flex-direction: column; }
+      .drawing-toolbar > .flex { width: 100%; justify-content: flex-start; }
+      .drawing-scroll-area { height: calc(100% - 5.25rem); }
+      .drawing-scroll-area .draw-stage { width: min(100%, 760px, calc((96dvh - 360px) * 1.3333)); }
+    }
     @media (max-width: 640px) {
       .drawing-workspace { grid-template-columns: 1fr; }
       .drawing-workspace > .flex-grow { grid-column: 1; grid-row: 1; }
@@ -95,6 +158,7 @@
     }
     #drawingCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
     .tool-active { color: #fff !important; background: rgba(56,189,248,.3) !important; border-color: rgba(56,189,248,.8) !important; }
+    #createMemoryModal .grid.grid-cols-5 > label { padding: .45rem; gap: .35rem; }
 
     .glass-card {
       background: rgba(15, 10, 32, 0.75);
@@ -302,17 +366,26 @@
           <select id="inputMemoryCountry" required class="w-full mb-2 bg-space-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-pink-500 transition">
             <option value="">Cargando países…</option>
           </select>
-          <input type="text" id="inputMemoryPlace" required placeholder="Lugar o nodo geográfico: ciudad, barrio, playa..." 
+          <input type="text" id="inputMemoryPlace" required placeholder="Lugar o nodo geográfico: Bogotá, La Habana, Margarita..." 
                  class="w-full bg-space-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-pink-500 transition">
         </div>
 
-        <!-- Archivo de Audio -->
+        <!-- Audio subido o grabado -->
         <div>
           <label class="block text-xs font-semibold text-cyanGlow mb-1.5 flex items-center gap-1.5">
-            <i class="fa-solid fa-file-audio text-cyanGlow"></i> Archivo de Audio
+            <i class="fa-solid fa-microphone-lines text-cyanGlow"></i> Audio del recuerdo
           </label>
-          <input type="file" id="inputMemoryAudio" accept="audio/*" required onchange="handleAudioSelect(event)"
+          <input type="file" id="inputMemoryAudio" accept="audio/*" onchange="handleAudioSelect(event)"
                  class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer bg-space-900/90 border border-slate-700/80 rounded-xl p-2 focus:outline-none focus:border-cyanGlow transition">
+          <div class="flex items-center gap-2 mt-2">
+            <button type="button" id="startRecordingBtn" onclick="startAudioRecording()" class="px-3 py-2 text-xs rounded-xl border border-red-400/40 text-red-200 hover:bg-red-500/20 transition">
+              <i class="fa-solid fa-circle mr-1"></i> Grabar audio
+            </button>
+            <button type="button" id="stopRecordingBtn" onclick="stopAudioRecording()" disabled class="px-3 py-2 text-xs rounded-xl border border-slate-600 text-slate-400 disabled:opacity-40 transition">
+              <i class="fa-solid fa-stop mr-1"></i> Detener
+            </button>
+            <span id="recordingStatus" class="text-[11px] text-slate-500">Puedes subir un archivo o grabarlo.</span>
+          </div>
           <div id="modalAudioPreviewContainer" class="hidden mt-3 p-3 rounded-xl bg-space-900/90 border border-cyanGlow/30">
             <p class="text-[11px] text-cyan-300 mb-1.5 font-medium flex items-center gap-1">
               <i class="fa-solid fa-circle-play"></i> Vista previa de audio cargado:
@@ -323,7 +396,7 @@
 
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-2">Aura Emocional</label>
-          <div class="grid grid-cols-4 gap-2">
+          <div class="grid grid-cols-5 gap-1.5">
             <label class="cursor-pointer border border-slate-700 rounded-xl p-2.5 flex items-center justify-center gap-2 hover:bg-slate-800/50">
               <input type="radio" name="auraColor" value="cyan" checked class="hidden peer">
               <span class="w-4 h-4 rounded-full bg-cyan-400 ring-2 ring-transparent peer-checked:ring-white"></span>
@@ -361,7 +434,7 @@
   </div>
 
   <div id="memoryBoardModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 md:p-6 bg-space-900/85 backdrop-blur-xl">
-    <div class="glass-modal w-full max-w-3xl rounded-3xl p-5 md:p-8 relative shadow-2xl max-h-[94vh] flex flex-col overflow-hidden">
+    <div class="memory-board-shell glass-modal w-full max-w-3xl rounded-3xl p-5 md:p-8 relative shadow-2xl max-h-[94vh] flex flex-col">
       <button onclick="closeModal('memoryBoardModal')" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-800/80 hover:bg-red-500/30 hover:text-red-300 text-slate-400 flex items-center justify-center transition z-20">
         <i class="fa-solid fa-xmark text-lg"></i>
       </button>
@@ -400,7 +473,7 @@
 
       <!-- Canvas Drawing -->
       <div class="flex-grow flex flex-col my-2 min-h-[200px]">
-        <div class="flex items-center justify-between mb-2">
+        <div class="drawing-toolbar flex items-center justify-between mb-2">
           <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
             <i class="fa-solid fa-palette text-cyanGlow"></i> Lienzo de Trazo Subconsciente
           </span>
@@ -409,6 +482,9 @@
             <button onclick="setDrawTool('eraser')" id="toolEraser" title="Borrador" class="draw-tool px-2.5 py-1.5 text-[11px] rounded border border-slate-700 bg-space-900/70"><i class="fa-solid fa-eraser"></i></button>
             <button onclick="setDrawTool('fill')" id="toolFill" title="Rellenar" class="draw-tool px-2.5 py-1.5 text-[11px] rounded border border-slate-700 bg-space-900/70"><i class="fa-solid fa-fill-drip"></i></button>
             <input type="color" id="brushColor" value="#38bdf8" title="Color" class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer">
+            <button onclick="changeCanvasZoom(-0.25)" title="Alejar lienzo" class="px-2 py-1.5 text-[11px] rounded border border-slate-700 bg-space-900/70">−</button>
+            <span id="canvasZoomLabel" class="text-[10px] text-slate-400 min-w-[32px] text-center">100%</span>
+            <button onclick="changeCanvasZoom(0.25)" title="Acercar lienzo" class="px-2 py-1.5 text-[11px] rounded border border-slate-700 bg-space-900/70">+</button>
             <input type="range" id="brushSize" min="1" max="48" value="6" title="Tamaño del pincel" class="w-20 accent-cyanGlow cursor-pointer">
             <button onclick="playNodeAudio()" title="Reproducir audio de esta neurona" class="px-2.5 py-1.5 text-[11px] text-cyan-200 border border-cyan-500/40 rounded hover:bg-cyan-500/20"><i class="fa-solid fa-play"></i></button>
             <button onclick="stopNodeAudio()" title="Detener audio" class="px-2.5 py-1.5 text-[11px] text-slate-200 border border-slate-600 rounded hover:bg-slate-600"><i class="fa-solid fa-stop"></i></button>
@@ -416,25 +492,44 @@
           </div>
         </div>
 
-        <div class="relative draw-stage bg-white rounded-2xl overflow-hidden shadow-inner">
-          <canvas id="drawingCanvas" class="w-full h-full cursor-crosshair touch-none"></canvas>
+        <div id="drawingScrollArea" class="drawing-scroll-area">
+          <div class="relative draw-stage bg-white rounded-2xl overflow-hidden shadow-inner">
+            <canvas id="drawingCanvas" class="w-full h-full cursor-crosshair touch-none"></canvas>
+          </div>
         </div>
       </div>
       </div>
 
-      <!-- Gallery -->
-      <div class="pt-2 border-t border-slate-800">
-        <h4 class="text-[11px] font-semibold text-slate-400 mb-1.5">Trazos de la comunidad en esta neurona:</h4>
-        <div id="nodeGalleryGrid" class="flex gap-2 overflow-x-auto pb-1 min-h-[50px]"></div>
-      </div>
-
       <!-- Buttons Footer -->
-      <div class="pt-2 flex gap-2">
+      <div class="drawing-share-footer flex gap-2">
+        <button onclick="openCommunityDrawings()" class="flex-1 py-2.5 rounded-xl border border-purple-500/40 bg-purple-900/30 text-purple-200 text-xs font-semibold hover:bg-purple-800/50 transition">
+          <i class="fa-solid fa-images mr-1.5"></i> Ver trazos de la comunidad
+        </button>
         <button onclick="saveDrawingToNode()" 
-                class="flex-grow py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-semibold text-xs md:text-sm shadow-lg transition active:scale-98">
+                class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-semibold text-xs md:text-sm shadow-lg transition active:scale-98">
           <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Compartir mi Trazo
         </button>
       </div>
+    </div>
+  </div>
+
+  <div id="drawingPreviewModal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 bg-space-900/85 backdrop-blur-md">
+    <div class="glass-modal w-full max-w-2xl rounded-3xl p-5 md:p-7 relative shadow-2xl flex flex-col items-center">
+      <button onclick="closeDrawingPreview()" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-800/80 text-slate-400 hover:text-white flex items-center justify-center">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <h3 class="text-sm font-semibold text-cyan-200 mb-4">Visualización del trazo</h3>
+      <img id="drawingPreviewModalImg" class="max-h-[75vh] max-w-full rounded-2xl border border-cyanGlow/40 object-contain bg-white shadow-lg" src="" alt="Trazo compartido ampliado">
+    </div>
+  </div>
+
+  <div id="communityDrawingsModal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 bg-space-900/85 backdrop-blur-md">
+    <div class="glass-modal w-full max-w-2xl rounded-3xl p-5 md:p-7 relative shadow-2xl">
+      <button onclick="closeModal('communityDrawingsModal')" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-800/80 text-slate-400 hover:text-white flex items-center justify-center">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <h3 class="text-base font-semibold text-purple-200 mb-4 pr-10">Trazos de la comunidad de esta neurona</h3>
+      <div id="communityDrawingsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[70vh] overflow-y-auto pr-1"></div>
     </div>
   </div>
 
@@ -585,6 +680,9 @@
     let activeNodeId = null;
     let selectedAudioBase64 = null;
     let selectedAudioFile = null;
+    let audioRecorder = null;
+    let recordingStream = null;
+    let recordedAudioChunks = [];
 
     function handleAudioSelect(event) {
       const file = event.target.files[0];
@@ -593,6 +691,8 @@
 
       if (file) {
         selectedAudioFile = file;
+        recordedAudioChunks = [];
+        document.getElementById('recordingStatus').innerText = `Archivo seleccionado: ${file.name}`;
 
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -606,6 +706,42 @@
         selectedAudioFile = null;
         previewContainer.classList.add('hidden');
       }
+    }
+
+    async function startAudioRecording() {
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        showToast('Tu navegador no permite grabar audio desde esta página.');
+        return;
+      }
+      try {
+        recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordedAudioChunks = [];
+        audioRecorder = new MediaRecorder(recordingStream);
+        audioRecorder.ondataavailable = event => { if (event.data.size) recordedAudioChunks.push(event.data); };
+        audioRecorder.onstop = () => {
+          const blob = new Blob(recordedAudioChunks, { type: audioRecorder.mimeType || 'audio/webm' });
+          selectedAudioFile = new File([blob], `grabacion-${Date.now()}.webm`, { type: blob.type });
+          const previewAudio = document.getElementById('modalAudioPreview');
+          previewAudio.src = URL.createObjectURL(blob);
+          document.getElementById('modalAudioPreviewContainer').classList.remove('hidden');
+          document.getElementById('recordingStatus').innerText = 'Grabación lista para usar.';
+          document.getElementById('startRecordingBtn').disabled = false;
+          document.getElementById('stopRecordingBtn').disabled = true;
+          recordingStream?.getTracks().forEach(track => track.stop());
+          recordingStream = null;
+        };
+        audioRecorder.start();
+        document.getElementById('startRecordingBtn').disabled = true;
+        document.getElementById('stopRecordingBtn').disabled = false;
+        document.getElementById('recordingStatus').innerText = 'Grabando… pulsa Detener para finalizar.';
+      } catch (error) {
+        console.error('Error accediendo al micrófono:', error);
+        showToast('No se pudo acceder al micrófono. Concede permiso al navegador.');
+      }
+    }
+
+    function stopAudioRecording() {
+      if (audioRecorder && audioRecorder.state !== 'inactive') audioRecorder.stop();
     }
 
     /* Web Audio Soundscape Synthesizer */
@@ -1240,6 +1376,19 @@
     const DRAWING_WIDTH = 1200;
     const DRAWING_HEIGHT = 900;
     let drawingHistory = [];
+    let canvasZoom = 1;
+
+    function changeCanvasZoom(delta) {
+      canvasZoom = Math.max(0.5, Math.min(3, canvasZoom + delta));
+      const stage = document.querySelector('.draw-stage');
+      const scrollArea = document.getElementById('drawingScrollArea');
+      if (stage && scrollArea) {
+        const baseWidth = Math.max(280, Math.min(760, scrollArea.clientWidth - 8));
+        stage.style.width = `${baseWidth * canvasZoom}px`;
+      }
+      const label = document.getElementById('canvasZoomLabel');
+      if (label) label.textContent = `${Math.round(canvasZoom * 100)}%`;
+    }
 
     function resizeCanvas() {
       const parent = canvas.parentElement;
@@ -1251,6 +1400,7 @@
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       if (old.width && old.height) ctx.drawImage(old, 0, 0, canvas.width, canvas.height);
       drawingHistory = [ctx.getImageData(0, 0, canvas.width, canvas.height)];
+      changeCanvasZoom(0);
     }
 
     function saveDrawingHistory() {
@@ -1341,6 +1491,7 @@
     }
 
     function openCreateMemoryModal() {
+      if (audioRecorder && audioRecorder.state !== 'inactive') audioRecorder.stop();
       const titleInput = document.getElementById('inputMemoryTitle');
       const authorInput = document.getElementById('inputMemoryAuthor');
       const placeInput = document.getElementById('inputMemoryPlace');
@@ -1358,6 +1509,9 @@
       if (previewContainer) previewContainer.classList.add('hidden');
       selectedAudioBase64 = null;
       selectedAudioFile = null;
+      document.getElementById('recordingStatus').innerText = 'Puedes subir un archivo o grabarlo.';
+      document.getElementById('startRecordingBtn').disabled = false;
+      document.getElementById('stopRecordingBtn').disabled = true;
       const saveButton = document.getElementById('btnSaveMemory');
       if (saveButton) {
         saveButton.disabled = false;
@@ -1377,7 +1531,7 @@
 
       if (!title || !place || !country || !author) return;
       if (!selectedAudioFile) {
-        showToast('Debes subir un audio para añadir la neurona.');
+        showToast('Debes subir o grabar un audio para añadir la neurona.');
         return;
       }
 
@@ -1462,7 +1616,7 @@
       }
 
       // Galería y Visualizador de Trazos
-      const gallery = document.getElementById('nodeGalleryGrid');
+      const gallery = document.getElementById('communityDrawingsGrid');
       gallery.innerHTML = '';
       if (node.drawings && node.drawings.length > 0) {
         node.drawings.forEach((dataUrl, idx) => {
@@ -1489,6 +1643,26 @@
       setTimeout(resizeCanvas, 50);
     }
 
+    function openCommunityDrawings() {
+      const node = window.memories.find(m => m.id === activeNodeId);
+      const gallery = document.getElementById('communityDrawingsGrid');
+      if (!node || !gallery) return;
+      gallery.innerHTML = '';
+      if (!node.drawings || node.drawings.length === 0) {
+        gallery.innerHTML = '<p class="text-xs text-slate-500 italic col-span-full">No hay trazos compartidos aún.</p>';
+      } else {
+        node.drawings.forEach((dataUrl, idx) => {
+          const img = document.createElement('img');
+          img.className = 'w-full aspect-[4/3] object-cover rounded-xl border-2 border-cyanGlow/40 bg-white shadow cursor-pointer hover:border-cyanGlow hover:scale-[1.02] transition';
+          img.src = dataUrl;
+          img.alt = `Trazo comunitario ${idx + 1}`;
+          img.onclick = () => selectGalleryDrawing(dataUrl, idx);
+          gallery.appendChild(img);
+        });
+      }
+      openModal('communityDrawingsModal');
+    }
+
     function playNodeAudio() {
       const audio = document.getElementById('boardNodeAudio');
       if (!audio?.src) return showToast('Esta neurona no tiene audio para reproducir.');
@@ -1503,13 +1677,15 @@
     }
 
     function selectGalleryDrawing(dataUrl, idx) {
-      const previewBox = document.getElementById('boardDrawingPreviewBox');
-      const previewImg = document.getElementById('boardDrawingPreviewImg');
-      if (previewBox && previewImg) {
+      closeModal('communityDrawingsModal');
+      const previewModal = document.getElementById('drawingPreviewModal');
+      const previewImg = document.getElementById('drawingPreviewModalImg');
+      if (previewModal && previewImg) {
         previewImg.src = dataUrl;
-        previewBox.classList.remove('hidden');
+        previewModal.classList.remove('hidden');
+        previewModal.classList.add('flex');
       }
-      const galleryImgs = document.querySelectorAll('#nodeGalleryGrid img');
+      const galleryImgs = document.querySelectorAll('#communityDrawingsGrid img');
       galleryImgs.forEach((img, i) => {
         if (i === idx) {
           img.classList.add('border-cyanGlow', 'scale-105');
@@ -1522,8 +1698,11 @@
     }
 
     function closeDrawingPreview() {
-      const previewBox = document.getElementById('boardDrawingPreviewBox');
-      if (previewBox) previewBox.classList.add('hidden');
+      const previewModal = document.getElementById('drawingPreviewModal');
+      if (previewModal) {
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+      }
     }
 
     function saveDrawingToNode() {
@@ -1578,10 +1757,47 @@
       setTimeout(() => toast.remove(), 3200);
     }
 
+    function applyTutorialInstructions() {
+      const box = document.querySelector('#tutorialModal .space-y-3');
+      if (!box) return;
+      box.className = 'tutorial-panels text-sm text-slate-300 leading-relaxed';
+      box.innerHTML = `
+        <div class="tutorial-panel">
+        <section>
+          <h3 class="text-base font-semibold text-cyan-300 mb-2">Comparte un recuerdo</h3>
+          <p class="mb-2">Cada lugar guarda una historia. En este espacio puedes conservar la tuya.</p>
+          <ol class="list-decimal list-inside space-y-1.5">
+            <li>Selecciona <b>“Añadir recuerdo”</b>.</li>
+            <li>Llena los datos.</li>
+            <li>Graba o sube un audio contando ese recuerdo. No hay una forma correcta de hacerlo: puedes describir el lugar, narrar una experiencia, hablar de una persona o simplemente compartir aquello que aún permanece en tu memoria.</li>
+            <li>Cuando termines, guarda tu recuerdo para que otras personas puedan escucharlo.</li>
+            <li>Escoge el aura de tu recuerdo: el color que más te guste.</li>
+            <li>Sube tu recuerdo.</li>
+          </ol>
+          <p class="mt-2">Así tu voz pasará a formar parte de un archivo colectivo de memorias.</p>
+        </section>
+        </div>
+        <div class="tutorial-panel">
+        <section>
+          <h3 class="text-base font-semibold text-purple-300 mb-2">Intervén un recuerdo</h3>
+          <p class="mb-2">Los recuerdos también pueden transformarse cuando alguien más los escucha.</p>
+          <ol class="list-decimal list-inside space-y-1.5">
+            <li>Explora los recuerdos compartidos por otros usuarios.</li>
+            <li>Elige uno que despierte tu imaginación.</li>
+            <li>Escucha el audio con atención.</li>
+            <li>Mientras lo escuchas, utiliza el lienzo para dibujar aquello que imaginas o sientes a partir de esa historia.</li>
+            <li>Haz clic en <b>“Compartir mi trazo”</b> y guarda tu dibujo para que quede vinculado a ese recuerdo.</li>
+            <li>No se trata de ilustrar exactamente lo que se cuenta, sino de plasmar cómo ese recuerdo resonó en ti. También puedes ver lo que han dibujado otras personas.</li>
+          </ol>
+        </section>
+        </div>`;
+    }
+
     window.addEventListener('resize', () => { initSpaceCanvas(); window.renderNeuralMap(); });
     window.onload = () => { 
       initSpaceCanvas(); 
       animateSpaceParticles(); 
+      applyTutorialInstructions();
       loadCountryOptions();
       window.updateLocationFilterOptions();
       window.renderNeuralMap(); 
