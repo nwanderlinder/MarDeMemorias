@@ -77,10 +77,10 @@
     #memorySea.dense-1 .neuron-node { --neuron-size: clamp(120px, 14vw, 185px); }
     #memorySea.dense-2 .neuron-node { --neuron-size: clamp(96px, 11vw, 145px); }
     .neuron-node .neuron-visual { width: var(--neuron-size); height: var(--neuron-size); }
-    .neuron-title { margin-top: -0.9rem; position: relative; z-index: 2; }
-    .neuron-meta { margin-top: -0.3rem; position: relative; z-index: 2; }
-    .neuron-author { margin-top: -0.2rem; position: relative; z-index: 2; }
-    .neuron-audio-badge { right: 0.35rem; bottom: 0.35rem; }
+    /* Los WebP tienen transparencia interna; el bloque sube hasta tocar su borde visible. */
+    .neuron-title { margin-top: calc(var(--neuron-size) * -0.25); position: relative; z-index: 2; line-height: 4; }
+    .neuron-meta { margin-top: -0.2rem; position: relative; z-index: 2; line-height: 2; }
+    .neuron-author { margin-top: -0.3rem; position: relative; z-index: 2; line-height: 2; }
     .waves-overlay { opacity: .55; mix-blend-mode: screen; }
     .draw-stage { aspect-ratio: 4 / 3; width: min(100%, 760px); height: auto; min-height: 0; flex: 0 0 auto; margin-inline: auto; }
     .drawing-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: .75rem; align-items: start; min-height: 0; }
@@ -1158,7 +1158,6 @@
 
             ${drawingsVignettesHtml}
 
-            ${node.audioData ? `<div class="neuron-audio-badge absolute w-6 h-6 rounded-full bg-cyan-500/90 border border-cyan-200 flex items-center justify-center shadow text-[10px] text-white z-20"><i class="fa-solid fa-music"></i></div>` : ''}
           </div>
 
           <div class="neuron-title px-3 py-1 rounded-full glass-card border border-slate-700/60 text-xs font-semibold text-slate-200 whitespace-nowrap shadow-lg flex items-center gap-1.5">
