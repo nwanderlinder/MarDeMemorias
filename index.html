@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>El Mar de la Memoria - Red Neuronal Colectiva</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['Cinzel', 'serif']
+          },
+          colors: {
+            space: {
+              900: '#06030e',
+              800: '#0c071e',
+              700: '#150d33',
+              600: '#21154c'
+            },
+            cyanGlow: '#38bdf8',
+            purpleGlow: '#a855f7',
+            emeraldGlow: '#34d399',
+            amberGlow: '#fbbf24'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    body {
+      background-color: #06030e;
+      color: #f8fafc;
+      overflow: hidden;
+    }
+
+    #spaceCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    #memorySea { container-type: inline-size; }
+    .neuron-node {
+		--neuron-size: clamp(180px, 22vw, 280px);
+	}
+    .neuron-visual > svg { display: none; }
+    .neon-image { display: block; border-radius: 16px; animation: neuronWobble 4s ease-in-out infinite; }
+    .neon-purple { filter: drop-shadow(0 0 7px rgba(138,43,226,.65)) drop-shadow(0 0 18px rgba(148,0,211,.85)) drop-shadow(0 0 32px rgba(138,43,226,.9)); }
+    .neon-green { filter: drop-shadow(0 0 7px rgba(52,211,153,.65)) drop-shadow(0 0 18px rgba(16,185,129,.85)) drop-shadow(0 0 32px rgba(52,211,153,.9)); }
+    .neon-yellow { filter: drop-shadow(0 0 7px rgba(255,215,0,.65)) drop-shadow(0 0 18px rgba(218,165,32,.85)) drop-shadow(0 0 32px rgba(255,215,0,.9)); }
+    .neon-blue { filter: drop-shadow(0 0 7px rgba(0,191,255,.65)) drop-shadow(0 0 18px rgba(30,144,255,.85)) drop-shadow(0 0 32px rgba(0,119,255,.9)); }
+    @keyframes neuronWobble { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-8px) rotate(1.5deg); } }
+    #memorySea.dense-1 .neuron-node { --neuron-size: clamp(120px, 14vw, 185px); }
+    #memorySea.dense-2 .neuron-node { --neuron-size: clamp(96px, 11vw, 145px); }
+    .neuron-node .neuron-visual { width: var(--neuron-size); height: var(--neuron-size); }
+    .neuron-title { margin-top: -0.30rem; position: relative; z-index: 2; }
+    .neuron-meta { margin-top: -0.15rem; position: relative; z-index: 2; }
+    .neuron-author { margin-top: -0.1rem; position: relative; z-index: 2; }
+    .neuron-audio-badge { right: 0.35rem; bottom: 0.35rem; }
+    .waves-overlay { opacity: .55; mix-blend-mode: screen; }
+    .draw-stage { aspect-ratio: 4 / 3; width: min(100%, 760px); margin-inline: auto; }
+    #drawingCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    .tool-active { color: #fff !important; background: rgba(56,189,248,.3) !important; border-color: rgba(56,189,248,.8) !important; }
+
+    .glass-card {
+      background: rgba(15, 10, 32, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-modal {
+      background: rgba(10, 6, 24, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .synapse-path {
+      fill: none;
+      stroke-linecap: round;
+      transition: stroke 0.5s ease;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.12; stroke-width: 1; }
+      50% { opacity: 0.3; stroke-width: 1.4; }
+    }
+
+    .synapse-pulse {
+      animation: pulseGlow 6s ease-in-out infinite;
+    }
+
+    @keyframes neuronFloat {
+      0%, 100% { transform: translate(-50%, -50%) translateY(0px) scale(1); }
+      50% { transform: translate(-50%, -50%) translateY(-8px) scale(1.03); }
+    }
+
+    @keyframes frameEyesOpen {
+      0%, 72%, 100% { opacity: 1; }
+      74%, 98% { opacity: 0; }
+    }
+
+    @keyframes frameEyesHalf {
+      0%, 72%, 98%, 100% { opacity: 0; }
+      74%, 78%, 94%, 97% { opacity: 1; }
+    }
+
+    @keyframes frameEyesClosed {
+      0%, 77%, 93%, 100% { opacity: 0; }
+      80%, 91% { opacity: 1; }
+    }
+
+    .neuron-eyes-open {
+      animation: frameEyesOpen 4.8s infinite linear;
+    }
+
+    .neuron-eyes-half {
+      animation: frameEyesHalf 4.8s infinite linear;
+    }
+
+    .neuron-eyes-closed {
+      animation: frameEyesClosed 4.8s infinite linear;
+    }
+
+    .neuron-node {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      z-index: 10;
+      transition: top 0.6s cubic-bezier(0.16, 1, 0.3, 1), left 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: neuronFloat 5s ease-in-out infinite;
+    }
+
+    .neuron-node:hover {
+      z-index: 25;
+      animation-play-state: paused;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .ai-shimmer {
+      background: linear-gradient(90deg, rgba(56,189,248,0.1) 0%, rgba(168,85,247,0.3) 50%, rgba(56,189,248,0.1) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 3s infinite;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(6, 3, 14, 0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.6); }
+  </style>
+</head>
+
+<body class="h-full w-full flex flex-col font-sans relative select-none">
+
+  <canvas id="spaceCanvas"></canvas>
+
+	  <header class="fixed top-0 left-0 w-full z-30 p-4 md:p-6 pointer-events-none flex items-center justify-start bg-gradient-to-b from-space-900/90 via-space-900/40 to-transparent">
+		
+		  <div class="pointer-events-auto flex items-center gap-3">
+		  <img src="Logocolor.png" alt="El Mar de la Memoria" class="h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_16px_rgba(56,189,248,.45)]">
+		</div>
+
+	  </header>
+
+    <!-- Search and Controls -->
+    <div class="fixed top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center gap-2 bg-space-800/80 p-1.5 rounded-full border border-slate-700/50 shadow-xl backdrop-blur-md max-w-[calc(100vw-1rem)] overflow-x-auto">
+      <div class="flex items-center gap-2 px-3 py-1 bg-space-900/60 rounded-full border border-slate-800">
+        <i class="fa-solid fa-magnifying-glass text-xs text-slate-400"></i>
+        <input type="text" id="searchInput" placeholder="Buscar recuerdo..." oninput="filterMemories()" 
+               class="bg-transparent text-xs text-slate-200 outline-none w-28 md:w-36 placeholder:text-slate-500">
+      </div>
+
+        <select id="countryFilter" onchange="filterMemories()" class="bg-space-900/80 text-xs text-slate-300 border border-slate-800 rounded-full px-3 py-1.5 outline-none cursor-pointer">
+        <option value="ALL">Todos los países</option>
+      </select>
+
+      <button onclick="toggleAudioAtmosphere()" id="audioAtmosphereBtn" title="Alternar música de fondo"
+              class="w-8 h-8 rounded-full bg-space-900/80 hover:bg-cyanGlow/20 border border-slate-700 text-slate-400 hover:text-cyanGlow flex items-center justify-center transition">
+        <i class="fa-solid fa-volume-xmark text-xs" id="audioAtmosphereIcon"></i>
+      </button>
+
+      <button onclick="openModal('tutorialModal')" title="Tutorial"
+              class="w-8 h-8 rounded-full bg-space-900/80 hover:bg-purpleGlow/20 border border-slate-700 text-slate-400 hover:text-purple-300 flex items-center justify-center transition">
+        <i class="fa-solid fa-circle-question text-xs"></i>
+      </button>
+
+    </div>
+
+    <!-- Metrics -->
+    <div class="fixed top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-auto hidden lg:flex items-center gap-4 text-xs font-medium text-slate-400 bg-space-800/60 px-4 py-2 rounded-full border border-slate-800">
+      <span class="flex items-center gap-1.5">
+        <i class="fa-solid fa-circle-dot text-cyanGlow text-[8px]"></i>
+        <strong id="statMemories" class="text-slate-200">0</strong> Neuronas
+      </span>
+      <span class="text-slate-700">|</span>
+      <span class="flex items-center gap-1.5">
+        <i class="fa-solid fa-diagram-project text-purpleGlow text-xs"></i>
+        <strong id="statSynapses" class="text-slate-200">0</strong> Sinapsis
+      </span>
+    </div>
+  <main id="memorySea" class="relative w-full h-full overflow-hidden z-10 flex-grow">
+    <svg id="synapseSvg" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
+  </main>
+
+  <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 max-w-[95vw]">
+    <button onclick="openCreateMemoryModal()" 
+            class="px-6 py-3.5 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-semibold text-xs md:text-sm shadow-lg shadow-emerald-500/25 flex items-center gap-2.5 transition hover:scale-105 active:scale-95">
+      <i class="fa-solid fa-plus-circle text-base"></i>
+      <span>Añadir tu recuerdo</span>
+    </button>
+  </div>
+
+  <div id="toastContainer" class="fixed top-20 right-5 z-50 flex flex-col gap-2.5 pointer-events-none"></div>
+
+  <div id="tutorialModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-space-900/80 backdrop-blur-md">
+    <div class="glass-modal w-full max-w-lg rounded-3xl p-6 md:p-8 relative shadow-2xl">
+      <button onclick="closeModal('tutorialModal')" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-800/60 hover:bg-red-500/30 text-slate-400 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      <h2 class="text-xl font-display font-bold text-cyan-200 mb-4">Cómo navegar El Mar de la Memoria</h2>
+      <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
+        <p><b class="text-cyan-300">1. Añade una memoria:</b> elige un país, escribe el lugar y guarda tu recuerdo para crear una neurona.</p>
+        <p><b class="text-purple-300">2. Explora:</b> las neuronas se mueven de forma independiente; las líneas de la ola muestran sus conexiones geográficas.</p>
+        <p><b class="text-emerald-300">3. Dale forma:</b> abre una neurona y usa pincel, borrador, color, tamaño o rellenar. El lienzo mantiene la proporción de la imagen guardada.</p>
+        <p><b class="text-amber-300">4. Comparte:</b> pulsa “Compartir mi trazo” para añadirlo a la galería pública.</p>
+        <p class="text-xs text-slate-500 pt-2">La música de fondo se carga desde <code>fondo.mp3</code> en este repositorio cuando el archivo está disponible.</p>
+      </div>
+    </div>
+  </div>
+
+  <audio id="backgroundMusic" src="fondo.mp3" loop preload="none"></audio>
+
+  <div id="createMemoryModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-space-900/80 backdrop-blur-md transition-opacity">
+    <div class="glass-modal w-full max-w-lg rounded-3xl p-6 md:p-8 relative shadow-2xl max-h-[90vh] overflow-y-auto">
+      <button onclick="closeModal('createMemoryModal')" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-800/60 hover:bg-red-500/30 hover:text-red-300 text-slate-400 flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-2">
+        <div class="p-3 rounded-2xl bg-cyanGlow/10 border border-cyanGlow/30 text-cyanGlow">
+          <i class="fa-solid fa-seedling text-xl"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-display font-bold text-slate-100">Fundar Nueva Neurona</h2>
+          <p class="text-xs text-slate-400">Siembra una memoria visible para toda la comunidad</p>
+        </div>
+      </div>
+
+      <form onsubmit="handleSaveMemory(event)" class="mt-5 flex flex-col gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Tu nombre</label>
+          <input type="text" id="inputMemoryAuthor" required maxlength="60" placeholder="¿Cómo quieres firmar este recuerdo?"
+                 class="w-full bg-space-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyanGlow transition">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Título del Recuerdo</label>
+          <input type="text" id="inputMemoryTitle" required placeholder="Ej. El sonido de las olas al anochecer" 
+                 class="w-full bg-space-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyanGlow transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-pink-400 mb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-location-dot"></i> Lugar o Nodo Geográfico
+          </label>
+          <select id="inputMemoryCountry" required class="w-full mb-2 bg-space-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-pink-500 transition">
+            <option value="">Cargando países…</option>
+          </select>
+          <input type="text" id="inputMemoryPlace" required placeholder="Lugar o nodo geográfico: ciudad, barrio, playa..." 
+                 class="w-full bg-space-900/90 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-pink-500 transition">
+        </div>
+
+        <!-- Archivo de Audio -->
+        <div>
+          <label class="block text-xs font-semibold text-cyanGlow mb-1.5 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-audio text-cyanGlow"></i> Archivo de Audio
+          </label>
+          <input type="file" id="inputMemoryAudio" accept="audio/*" onchange="handleAudioSelect(event)"
+                 class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer bg-space-900/90 border border-slate-700/80 rounded-xl p-2 focus:outline-none focus:border-cyanGlow transition">
+          <div id="modalAudioPreviewContainer" class="hidden mt-3 p-3 rounded-xl bg-space-900/90 border border-cyanGlow/30">
+            <p class="text-[11px] text-cyan-300 mb-1.5 font-medium flex items-center gap-1">
+              <i class="fa-solid fa-circle-play"></i> Vista previa de audio cargado:
+            </p>
+            <audio id="modalAudioPreview" controls class="w-full h-9 rounded-lg"></audio>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-2">Aura Emocional</label>
+          <div class="grid grid-cols-4 gap-2">
+            <label class="cursor-pointer border border-slate-700 rounded-xl p-2.5 flex items-center justify-center gap-2 hover:bg-slate-800/50">
+              <input type="radio" name="auraColor" value="cyan" checked class="hidden peer">
+              <span class="w-4 h-4 rounded-full bg-cyan-400 ring-2 ring-transparent peer-checked:ring-white"></span>
+              <span class="text-xs text-slate-300">Azul</span>
+            </label>
+            <label class="cursor-pointer border border-slate-700 rounded-xl p-2.5 flex items-center justify-center gap-2 hover:bg-slate-800/50">
+              <input type="radio" name="auraColor" value="purple" class="hidden peer">
+              <span class="w-4 h-4 rounded-full bg-purple-400 ring-2 ring-transparent peer-checked:ring-white"></span>
+              <span class="text-xs text-slate-300">Violeta</span>
+            </label>
+            <label class="cursor-pointer border border-slate-700 rounded-xl p-2.5 flex items-center justify-center gap-2 hover:bg-slate-800/50">
+              <input type="radio" name="auraColor" value="amber" class="hidden peer">
+              <span class="w-4 h-4 rounded-full bg-amber-400 ring-2 ring-transparent peer-checked:ring-white"></span>
+              <span class="text-xs text-slate-300">Ámbar</span>
+            </label>
+            <label class="cursor-pointer border border-slate-700 rounded-xl p-2.5 flex items-center justify-center gap-2 hover:bg-slate-800/50">
+              <input type="radio" name="auraColor" value="emerald" class="hidden peer">
+              <span class="w-4 h-4 rounded-full bg-emerald-400 ring-2 ring-transparent peer-checked:ring-white"></span>
+              <span class="text-xs text-slate-300">Verde</span>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" 
+                class="w-full mt-2 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/20 transition active:scale-98">
+          <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Añadir tu recuerdo
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="memoryBoardModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 md:p-6 bg-space-900/85 backdrop-blur-xl">
+    <div class="glass-modal w-full max-w-3xl rounded-3xl p-5 md:p-8 relative shadow-2xl max-h-[94vh] flex flex-col overflow-hidden">
+      <button onclick="closeModal('memoryBoardModal')" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-800/80 hover:bg-red-500/30 hover:text-red-300 text-slate-400 flex items-center justify-center transition z-20">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <div class="flex flex-col gap-1 pb-3 border-b border-slate-800">
+        <div class="flex items-center justify-between pr-10">
+          <div class="flex items-center gap-2 text-xs font-semibold text-pink-400">
+            <i class="fa-solid fa-location-dot"></i>
+            <span id="boardNodePlace">Ubicación</span>
+          </div>
+        </div>
+
+        <h2 id="boardNodeTitle" class="text-2xl font-display font-bold text-slate-100 pr-10">Título de la Memoria</h2>
+      </div>
+
+      <!-- Reproductor de Audio -->
+      <div id="boardNodeAudioContainer" class="hidden my-3 p-4 rounded-2xl border border-cyanGlow/40 bg-space-900/90 shadow-lg shadow-cyanGlow/10 flex flex-col gap-2">
+        <div class="flex items-center gap-2 text-xs font-semibold text-cyanGlow">
+          <i class="fa-solid fa-waveform"></i>
+          <span>Archivo de Audio Guardado</span>
+        </div>
+        <audio id="boardNodeAudio" controls class="w-full h-10 rounded-xl"></audio>
+      </div>
+
+      <!-- Preview / Visor de Trazo Seleccionado -->
+      <div id="boardDrawingPreviewBox" class="hidden my-2 p-3 rounded-2xl bg-space-900/90 border border-cyanGlow/40 relative flex flex-col items-center shadow-lg">
+        <button onclick="closeDrawingPreview()" class="absolute top-2 right-2 text-slate-400 hover:text-white text-xs bg-space-800 rounded-full w-6 h-6 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <span class="text-[11px] font-semibold text-cyan-300 mb-1.5 flex items-center gap-1">
+          <i class="fa-solid fa-image"></i> Visualizando Trazo Seleccionado
+        </span>
+        <img id="boardDrawingPreviewImg" class="max-h-40 md:max-h-48 rounded-xl border border-cyanGlow/30 object-contain bg-white shadow-md" src="" />
+      </div>
+
+      <!-- Canvas Drawing -->
+      <div class="flex-grow flex flex-col my-2 min-h-[200px]">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-palette text-cyanGlow"></i> Lienzo de Trazo Subconsciente
+          </span>
+          <div class="flex flex-wrap items-center justify-end gap-1.5">
+            <button onclick="setDrawTool('brush')" id="toolBrush" title="Pincel" class="draw-tool tool-active px-2.5 py-1.5 text-[11px] rounded border border-slate-700 bg-space-900/70"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="setDrawTool('eraser')" id="toolEraser" title="Borrador" class="draw-tool px-2.5 py-1.5 text-[11px] rounded border border-slate-700 bg-space-900/70"><i class="fa-solid fa-eraser"></i></button>
+            <button onclick="setDrawTool('fill')" id="toolFill" title="Rellenar" class="draw-tool px-2.5 py-1.5 text-[11px] rounded border border-slate-700 bg-space-900/70"><i class="fa-solid fa-fill-drip"></i></button>
+            <input type="color" id="brushColor" value="#38bdf8" title="Color" class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer">
+            <input type="range" id="brushSize" min="1" max="48" value="6" title="Tamaño del pincel" class="w-20 accent-cyanGlow cursor-pointer">
+            <button onclick="playNodeAudio()" title="Reproducir audio de esta neurona" class="px-2.5 py-1.5 text-[11px] text-cyan-200 border border-cyan-500/40 rounded hover:bg-cyan-500/20"><i class="fa-solid fa-play"></i></button>
+            <button onclick="stopNodeAudio()" title="Detener audio" class="px-2.5 py-1.5 text-[11px] text-slate-200 border border-slate-600 rounded hover:bg-slate-600"><i class="fa-solid fa-stop"></i></button>
+            <button onclick="clearCanvas()" class="px-2.5 py-1.5 text-[11px] bg-slate-700/60 text-slate-200 border border-slate-600 rounded hover:bg-slate-600">Vaciar lienzo</button>
+          </div>
+        </div>
+
+        <div class="relative draw-stage bg-white rounded-2xl overflow-hidden shadow-inner">
+          <canvas id="drawingCanvas" class="w-full h-full cursor-crosshair touch-none"></canvas>
+        </div>
+      </div>
+
+      <!-- Gallery -->
+      <div class="pt-2 border-t border-slate-800">
+        <h4 class="text-[11px] font-semibold text-slate-400 mb-1.5">Trazos de la comunidad en esta neurona:</h4>
+        <div id="nodeGalleryGrid" class="flex gap-2 overflow-x-auto pb-1 min-h-[50px]"></div>
+      </div>
+
+      <!-- Buttons Footer -->
+      <div class="pt-2 flex gap-2">
+        <button onclick="synthesizeAIReflection()" class="px-4 py-2.5 rounded-xl bg-purple-900/60 border border-purple-500/40 text-purple-200 text-xs font-semibold hover:bg-purple-800/80 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-sparkles text-purple-400"></i> Generar Poema IA
+        </button>
+        <button onclick="saveDrawingToNode()" 
+                class="flex-grow py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-semibold text-xs md:text-sm shadow-lg transition active:scale-98">
+          <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Compartir mi Trazo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+    // Configuración exacta extraída de tu consola de Firebase
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'mardelamemoria-52500';
+    const firebaseConfig = typeof __firebase_config !== 'undefined'
+      ? JSON.parse(__firebase_config)
+      : {
+          apiKey: "AIzaSyAFtob3a2qJl0_2uVaMeiQo82VrtcHuZwQ",
+          authDomain: "mardelamemoria-52500.firebaseapp.com",
+          databaseURL: "https://mardelamemoria-52500-default-rtdb.firebaseio.com",
+          projectId: "mardelamemoria-52500",
+          storageBucket: "mardelamemoria-52500.firebasestorage.app",
+          messagingSenderId: "701225160999",
+          appId: "1:701225160999:web:b828e3b4ed241e7c8fd902",
+          measurementId: "G-3FKC26B7TT"
+        };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    let currentUser = null;
+    window.cloudConnected = false;
+
+    async function initCloudSync() {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          const res = await signInWithCustomToken(auth, __initial_auth_token);
+          currentUser = res.user;
+        } else {
+          const res = await signInAnonymously(auth);
+          currentUser = res.user;
+        }
+      } catch (err) {
+        console.warn("Fallo de autenticación personalizada, reintentando de forma anónima...", err);
+        try {
+          const res = await signInAnonymously(auth);
+          currentUser = res.user;
+        } catch (e) {
+          console.error("Error al autenticar en Firebase:", e);
+        }
+      }
+
+      if (currentUser) {
+        window.cloudConnected = true;
+        setupSnapshotListener();
+      } else {
+        window.cloudConnected = false;
+        window.updateCloudStatus(false);
+      }
+    }
+
+    // Escuchador en tiempo real con la ruta estandarizada
+    function setupSnapshotListener() {
+      const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'memories');
+      onSnapshot(colRef, (snapshot) => {
+        const loaded = [];
+        snapshot.forEach((docSnap) => {
+          loaded.push(docSnap.data());
+        });
+        
+        if (loaded.length > 0) {
+          loaded.sort((a, b) => b.id - a.id);
+          window.memories = loaded;
+        } else {
+          window.memories = [];
+        }
+
+        window.updateLocationFilterOptions();
+        window.renderNeuralMap();
+        window.updateCloudStatus(true);
+      }, (error) => {
+        console.error("Error en sincronización Firestore en tiempo real:", error);
+        window.updateCloudStatus(false);
+      });
+    }
+
+    // Guardar una memoria individual en la nube con validación
+    window.saveMemoryToCloud = async function(memoryItem) {
+      try {
+        if (currentUser) {
+          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'memories', String(memoryItem.id));
+          await setDoc(docRef, memoryItem);
+          window.updateCloudStatus(true);
+          return true;
+        }
+      } catch (err) {
+        console.error("Error guardando recuerdo en la nube:", err);
+        if (typeof window.showToast === 'function') {
+          window.showToast("Error al sincronizar con la nube (verifica tamaño de audio).");
+        }
+      }
+      return false;
+    };
+
+    window.uploadMemoryAudio = async function(file, memoryId) {
+      if (!file) return null;
+      if (!currentUser) return URL.createObjectURL(file);
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const audioRef = ref(storage, `public-memories/audio/${memoryId}-${safeName}`);
+      await uploadBytes(audioRef, file, { contentType: file.type || 'audio/mpeg' });
+      return getDownloadURL(audioRef);
+    };
+
+    window.saveStateToCloud = function(data) {
+      if (Array.isArray(data)) {
+        data.forEach(item => window.saveMemoryToCloud(item));
+      }
+    };
+
+    window.clearAllMemories = async function() {
+      if (currentUser) {
+        try {
+          const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'memories');
+          const snap = await getDocs(colRef);
+          const deletePromises = [];
+          snap.forEach((docSnap) => {
+            deletePromises.push(deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'memories', docSnap.id)));
+          });
+          await Promise.all(deletePromises);
+        } catch (e) {
+          console.error("Error al borrar datos de la nube:", e);
+        }
+      }
+      window.memories = [];
+      window.updateLocationFilterOptions();
+      window.renderNeuralMap();
+      if (typeof window.showToast === 'function') {
+        window.showToast("Se ha vaciado la red neuronal.");
+      }
+    };
+
+    initCloudSync();
+  </script>
+
+  <script>
+    const NEURON_SVG_PATH = "M 100,30 Q 100,10 90,0 M 100,30 Q 100,10 110,0 M 100,30 L 120,60 Q 145,40 165,25 M 120,60 Q 145,55 170,55 M 120,60 L 140,100 Q 170,90 195,90 M 140,100 Q 170,110 190,120 M 140,100 L 120,140 Q 140,165 155,185 M 120,140 Q 125,165 125,190 M 120,140 L 80,140 Q 75,165 70,190 M 80,140 Q 60,165 45,185 M 80,140 L 60,100 Q 30,110 10,120 M 60,100 Q 30,90 5,90 M 60,100 L 80,60 Q 55,55 30,55 M 80,60 Q 55,40 35,25 M 80,60 Z";
+
+    window.defaultMemories = [];
+
+    window.memories = window.defaultMemories;
+    let activeNodeId = null;
+    let selectedAudioBase64 = null;
+    let selectedAudioFile = null;
+
+    function handleAudioSelect(event) {
+      const file = event.target.files[0];
+      const previewContainer = document.getElementById('modalAudioPreviewContainer');
+      const previewAudio = document.getElementById('modalAudioPreview');
+
+      if (file) {
+        selectedAudioFile = file;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          selectedAudioBase64 = e.target.result;
+          previewAudio.src = selectedAudioBase64;
+          previewContainer.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      } else {
+        selectedAudioBase64 = null;
+        selectedAudioFile = null;
+        previewContainer.classList.add('hidden');
+      }
+    }
+
+    /* Web Audio Soundscape Synthesizer */
+    let audioCtx = null;
+    let ambientOsc = null;
+    let ambientGain = null;
+    let isAtmospherePlaying = false;
+
+    function initAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function toggleAudioAtmosphere() {
+      const icon = document.getElementById('audioAtmosphereIcon');
+      const btn = document.getElementById('audioAtmosphereBtn');
+      const music = document.getElementById('backgroundMusic');
+
+      if (!isAtmospherePlaying) {
+        music.volume = 0.28;
+        music.play().catch(() => showToast('Añade fondo.mp3 al repositorio para activar la música.'));
+
+        isAtmospherePlaying = true;
+        icon.className = "fa-solid fa-volume-high text-xs text-cyanGlow";
+        btn.classList.add("border-cyanGlow");
+        showToast("Ondas armónicas del Mar de la Memoria activadas");
+      } else {
+        music.pause();
+        isAtmospherePlaying = false;
+        icon.className = "fa-solid fa-volume-xmark text-xs";
+        btn.classList.remove("border-cyanGlow");
+      }
+    }
+
+    function playChimeSound(freq = 440) {
+      try {
+        initAudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 1.2);
+      } catch(e) {}
+    }
+
+    // Helper: Base64 to ArrayBuffer
+    function base64ToArrayBuffer(base64) {
+      const binaryString = window.atob(base64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    // Helper: Convert PCM16 to WAV Blob
+    function pcmToWav(pcm16, sampleRate) {
+      const numChannels = 1;
+      const byteRate = sampleRate * numChannels * 2;
+      const blockAlign = numChannels * 2;
+      const dataSize = pcm16.length * 2;
+      const buffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(buffer);
+
+      function writeString(v, offset, str) {
+        for (let i = 0; i < str.length; i++) {
+          v.setUint8(offset + i, str.charCodeAt(i));
+        }
+      }
+
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, dataSize, true);
+
+      let offset = 44;
+      for (let i = 0; i < pcm16.length; i++, offset += 2) {
+        view.setInt16(offset, pcm16[i], true);
+      }
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    /* Recite Memory using Gemini TTS */
+    async function reciteMemoryTTS() {
+      const node = window.memories.find(m => m.id === activeNodeId);
+      if (!node) return;
+
+      const btnText = document.getElementById('btnReciteTTSText');
+      btnText.innerText = "Sintetizando...";
+
+      try {
+        const textToRead = `${node.title}. En ${node.place}. ${node.story}`;
+        const payload = {
+          contents: [{ parts: [{ text: `Di con una voz pausada, cálida y poética en español: ${textToRead}` }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: "Sulafat" } }
+            }
+          }
+        };
+
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+        
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        const part = result?.candidates?.[0]?.content?.parts?.[0];
+        const audioData = part?.inlineData?.data;
+        const mimeType = part?.inlineData?.mimeType;
+
+        if (audioData && mimeType) {
+          const rateMatch = mimeType.match(/rate=(\d+)/);
+          const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+          const arrayBuffer = base64ToArrayBuffer(audioData);
+          const pcm16 = new Int16Array(arrayBuffer);
+          const wavBlob = pcmToWav(pcm16, sampleRate);
+          const audioUrl = URL.createObjectURL(wavBlob);
+
+          const audio = new Audio(audioUrl);
+          audio.play();
+          btnText.innerText = "Reproduciendo...";
+          audio.onended = () => { btnText.innerText = "Escuchar Voz IA"; };
+        } else {
+          throw new Error("No audio payload");
+        }
+      } catch (err) {
+        console.error("TTS Error:", err);
+        showToast("No se pudo sintetizar el audio en este momento.");
+        btnText.innerText = "Escuchar Voz IA";
+      }
+    }
+
+    /* Generate AI Art with Imagen */
+    async function generateAIArtForModal() {
+      const story = document.getElementById('inputMemoryStory').value.trim();
+      const title = document.getElementById('inputMemoryTitle').value.trim();
+
+      if (!story && !title) {
+        showToast("Por favor escribe un título o relato primero.");
+        return;
+      }
+
+      const btn = document.getElementById('btnGenerateAIArtModal');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Generando Arte...`;
+
+      try {
+        const prompt = `A surreal, ethereal cosmic memory representation: "${title} - ${story}". Bioluminescent details, starry background, digital art canvas.`;
+        const payload = { instances: [{ prompt }], parameters: { sampleCount: 1 } };
+        
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        if (result.predictions?.[0]?.bytesBase64Encoded) {
+          const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+          document.getElementById('inputMemoryGif').value = imageUrl;
+          updateGifPreview(imageUrl);
+          showToast("¡Ilustración Onírica generada con éxito!");
+        } else {
+          throw new Error("Sin respuesta de imagen");
+        }
+      } catch (e) {
+        console.error("Image Gen Error:", e);
+        showToast("Error generando arte con IA.");
+      } finally {
+        btn.innerHTML = originalText;
+      }
+    }
+
+    /* Synthesize AI Reflection with Gemini */
+    async function synthesizeAIReflection() {
+      const node = window.memories.find(m => m.id === activeNodeId);
+      if (!node) return;
+
+      const box = document.getElementById('boardNodeAIReflection');
+      const poemText = document.getElementById('boardNodePoemText');
+      const reflectText = document.getElementById('boardNodeReflectText');
+
+      box.classList.remove('hidden');
+      poemText.innerText = "Sintetizando versos en la red neuronal...";
+      reflectText.innerText = "";
+
+      try {
+        const userQuery = `Analiza este recuerdo: "${node.title} - ${node.story}". Escribe un micro-poema de 2 a 3 líneas y una reflexión neuro-filosófica de 1 frase. Responde en JSON con las claves "poema" y "reflexion".`;
+        const payload = {
+          contents: [{ parts: [{ text: userQuery }] }],
+          generationConfig: { responseMimeType: "application/json" }
+        };
+
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        const jsonStr = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (jsonStr) {
+          const parsed = JSON.parse(jsonStr);
+          poemText.innerText = `"${parsed.poema}"`;
+          reflectText.innerText = parsed.reflexion;
+        } else {
+          throw new Error("No JSON response");
+        }
+      } catch (e) {
+        poemText.innerText = "El mar guarda silencio en este instante...";
+        reflectText.innerText = "La memoria resuena en las profundidades del pensamiento.";
+      }
+    }
+
+    function selectPresetGif(url) {
+      const input = document.getElementById('inputMemoryGif');
+      if (input) {
+        input.value = url;
+        updateGifPreview(url);
+      }
+    }
+
+    function updateGifPreview(url) {
+      const container = document.getElementById('modalGifPreviewContainer');
+      const img = document.getElementById('modalGifPreview');
+      if (url && url.trim().length > 5) {
+        img.src = url;
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+      }
+    }
+
+    function updateCloudStatus(connected) {
+      const badge = document.getElementById('cloudStatusBadge');
+      const text = document.getElementById('cloudStatusText');
+      if (!badge || !text) return;
+      if (connected) {
+        badge.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        text.innerText = "Sincronizado en la Nube";
+      } else {
+        badge.className = "w-2 h-2 rounded-full bg-amber-400";
+        text.innerText = "Modo Local";
+      }
+    }
+
+    let countryCatalog = [];
+    const COUNTRY_CODES = `AF AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BM BT BO BQ BA BW BV BR IO BN BG BF BI CV KH CM CA KY CF TD CL CN CX CC CO KM CG CD CK CR CI HR CU CW CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM VA HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MH MQ MR MU YT MX FM MD MC MN ME MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MK MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RU RW BL SH KN LC MF PM VC WS SM ST SA SN RS SC SL SG SX SK SI SB SO ZA GS SS ES LK SD SR SJ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UM UY UZ VU VE VN VG VI WF EH YE ZM ZW AX XK`.split(/\s+/);
+
+    function flagForCountryCode(code) {
+      return [...code].map(letter => String.fromCodePoint(127397 + letter.charCodeAt(0))).join('');
+    }
+
+    async function loadCountryOptions() {
+      const displayNames = new Intl.DisplayNames(['es'], { type: 'region' });
+      countryCatalog = COUNTRY_CODES
+        .map(code => `${flagForCountryCode(code)} ${displayNames.of(code) || code}`)
+        .filter((country, index, list) => list.indexOf(country) === index)
+        .sort((a, b) => a.localeCompare(b, 'es'));
+      const formSelect = document.getElementById('inputMemoryCountry');
+      if (formSelect) {
+        formSelect.innerHTML = '<option value="">Selecciona un país</option>';
+        countryCatalog.forEach(country => {
+          const option = document.createElement('option');
+          option.value = country;
+          option.textContent = country;
+          formSelect.appendChild(option);
+        });
+      }
+      updateLocationFilterOptions();
+    }
+
+    function updateLocationFilterOptions() {
+      const select = document.getElementById('countryFilter');
+      if (!select) return;
+
+      const currentVal = select.value;
+      const countries = new Set(countryCatalog);
+      window.memories.forEach(m => { if (m.country) countries.add(m.country.trim()); });
+
+      select.innerHTML = `<option value="ALL">Todos los países</option>`;
+      [...countries].sort((a, b) => a.localeCompare(b, 'es')).forEach(country => {
+        const opt = document.createElement('option');
+        opt.value = country;
+        opt.textContent = country;
+        select.appendChild(opt);
+      });
+      select.value = currentVal;
+    }
+
+    function updateStats() {
+      const statMemories = document.getElementById('statMemories');
+      const statSynapses = document.getElementById('statSynapses');
+      if (!statMemories || !statSynapses) return;
+
+      const countriesMap = {};
+      window.memories.forEach(node => {
+        const countryKey = node.country ? node.country.trim().toLowerCase() : `__sin_pais_${node.id}`;
+        if (!countriesMap[countryKey]) countriesMap[countryKey] = [];
+        countriesMap[countryKey].push(node);
+      });
+
+      let totalSynapses = 0;
+      Object.keys(countriesMap).forEach(country => {
+        const len = countriesMap[country].length;
+        if (len > 1) totalSynapses += (len * (len - 1)) / 2;
+      });
+
+      statMemories.innerText = window.memories.length;
+      statSynapses.innerText = totalSynapses;
+    }
+
+    function saveState() {
+      if (window.saveStateToCloud) {
+        window.saveStateToCloud(window.memories);
+      }
+      updateStats();
+    }
+
+    const spaceCanvas = document.getElementById('spaceCanvas');
+    const bgCtx = spaceCanvas.getContext('2d');
+    let particles = [];
+    let wavePhase = 0;
+
+    function initSpaceCanvas() {
+      spaceCanvas.width = window.innerWidth;
+      spaceCanvas.height = window.innerHeight;
+      particles = [];
+      const particleCount = Math.floor((spaceCanvas.width * spaceCanvas.height) / 18000);
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          x: Math.random() * spaceCanvas.width,
+          y: Math.random() * spaceCanvas.height,
+          size: Math.random() * 1.8 + 0.4,
+          alpha: Math.random() * 0.7 + 0.2,
+          speed: Math.random() * 0.25 + 0.05
+        });
+      }
+    }
+
+    function animateSpaceParticles() {
+      bgCtx.clearRect(0, 0, spaceCanvas.width, spaceCanvas.height);
+      wavePhase += 0.012;
+      for (let band = 0; band < 5; band++) {
+        bgCtx.beginPath();
+        for (let x = 0; x <= spaceCanvas.width; x += 12) {
+          const y = spaceCanvas.height * (0.25 + band * 0.14) + Math.sin(x * 0.009 + wavePhase * (1 + band * .12)) * (12 + band * 3) + Math.sin(x * .021 - wavePhase) * 6;
+          if (x === 0) bgCtx.moveTo(x, y); else bgCtx.lineTo(x, y);
+        }
+        bgCtx.strokeStyle = `rgba(${band % 2 ? '56,189,248' : '168,85,247'},${0.06 + band * .012})`;
+        bgCtx.lineWidth = 1.5;
+        bgCtx.stroke();
+      }
+      particles.forEach(p => {
+        p.y -= p.speed;
+        if (p.y < 0) p.y = spaceCanvas.height;
+        bgCtx.beginPath();
+        bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        bgCtx.fillStyle = `rgba(186, 230, 253, ${p.alpha})`;
+        bgCtx.fill();
+      });
+      requestAnimationFrame(animateSpaceParticles);
+    }
+
+    window.renderNeuralMap = function(filteredList = null) {
+      const sea = document.getElementById('memorySea');
+      const svg = document.getElementById('synapseSvg');
+      if (!sea || !svg) return;
+      sea.querySelectorAll('.neuron-node, .empty-sea-msg').forEach(el => el.remove());
+      svg.innerHTML = '';
+
+      const itemsToRender = filteredList || window.memories;
+      sea.classList.remove('dense-1', 'dense-2');
+      if (itemsToRender.length > 12) sea.classList.add('dense-1');
+      if (itemsToRender.length > 24) sea.classList.add('dense-2');
+
+      if (itemsToRender.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-sea-msg absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none p-6 rounded-3xl glass-card border border-cyanGlow/20 max-w-sm z-20';
+        emptyState.innerHTML = `
+          <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-cyanGlow/10 border border-cyanGlow/30 flex items-center justify-center text-cyanGlow">
+            <i class="fa-solid fa-water text-xl"></i>
+          </div>
+          <h3 class="text-base font-display font-semibold text-slate-200">El Mar está en reposo</h3>
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">No hay neuronas en la red. Haz clic en <strong>"Añadir tu recuerdo"</strong> para sembrar la primera memoria.</p>
+        `;
+        sea.appendChild(emptyState);
+      }
+
+      const countriesMap = {};
+
+      itemsToRender.forEach(node => {
+        const countryKey = node.country ? node.country.trim().toLowerCase() : `__sin_pais_${node.id}`;
+        if (!countriesMap[countryKey]) countriesMap[countryKey] = [];
+        countriesMap[countryKey].push(node);
+      });
+
+      Object.keys(countriesMap).forEach(country => {
+        const group = countriesMap[country];
+        if (group.length > 1) {
+          for (let i = 0; i < group.length; i++) {
+            for (let j = i + 1; j < group.length; j++) {
+              const n1 = group[i];
+              const n2 = group[j];
+              const x1 = (n1.x / 100) * sea.clientWidth;
+              const y1 = (n1.y / 100) * sea.clientHeight;
+              const x2 = (n2.x / 100) * sea.clientWidth;
+              const y2 = (n2.y / 100) * sea.clientHeight;
+
+              const dx = x2 - x1;
+              const dy = y2 - y1;
+              const cx = (x1 + x2) / 2 - dy * 0.2;
+              const cy = (y1 + y2) / 2 + dx * 0.2;
+
+              const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              path.dataset.from = n1.id;
+              path.dataset.to = n2.id;
+              path.setAttribute('d', `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`);
+              path.setAttribute('class', 'synapse-path synapse-pulse');
+
+              const strokeColor = n1.aura === 'purple' ? '#a855f7' : 
+                                 n1.aura === 'amber' ? '#fbbf24' : 
+                                 n1.aura === 'emerald' ? '#34d399' : '#38bdf8';
+              path.setAttribute('stroke', strokeColor);
+              path.setAttribute('stroke-width', '2');
+              svg.appendChild(path);
+            }
+          }
+        }
+      });
+
+      itemsToRender.forEach(node => {
+        const div = document.createElement('div');
+        div.className = 'neuron-node group flex flex-col items-center';
+        div.dataset.nodeId = node.id;
+        div.style.left = `${node.x}%`;
+        div.style.top = `${node.y}%`;
+        div.onclick = () => {
+          playChimeSound(node.aura === 'purple' ? 523.25 : node.aura === 'amber' ? 659.25 : 587.33);
+          openMemoryBoard(node.id);
+        };
+
+        const strokeColor = node.aura === 'purple' ? '#c084fc' : 
+                            node.aura === 'amber' ? '#fbbf24' : 
+                            node.aura === 'emerald' ? '#34d399' : '#38bdf8';
+        const neonClass = node.aura === 'purple' ? 'neon-purple' : node.aura === 'amber' ? 'neon-yellow' : node.aura === 'emerald' ? 'neon-green' : 'neon-blue';
+
+        const delay = (Math.random() * 3.5).toFixed(2);
+
+        const drawingsCount = node.drawings ? node.drawings.length : 0;
+        const drawingsVignettesHtml = (node.drawings || []).map((imgUrl, idx) => {
+          const angle = (2 * Math.PI / drawingsCount) * idx - (Math.PI / 2);
+          const radius = drawingsCount === 1 ? 58 : 64;
+          const offsetX = Math.round(radius * Math.cos(angle));
+          const offsetY = Math.round(radius * Math.sin(angle));
+
+          return `
+            <div onclick="event.stopPropagation(); playChimeSound(600); openMemoryBoard(${node.id}, ${idx});"
+                 title="Ver trazo ${idx + 1}"
+                 style="transform: translate(${offsetX}px, ${offsetY}px);"
+                 class="absolute top-1/2 left-1/2 -ml-4 -mt-4 w-8 h-8 rounded-lg border-2 border-cyan-400 bg-white shadow-lg overflow-hidden cursor-pointer hover:scale-125 hover:z-30 transition-transform duration-200">
+              <img src="${imgUrl}" class="w-full h-full object-cover" />
+            </div>
+          `;
+        }).join('');
+
+        div.innerHTML = `
+          <div class="neuron-visual relative flex items-center justify-center transition group-hover:scale-110 duration-300">
+            <img src="${node.neuronImage || 'n1.webp'}" alt="Neurona ${node.title}" class="neon-image ${neonClass} w-full h-full object-contain" onerror="this.src='n1.webp'">
+            <svg viewBox="0 0 200 200" class="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
+              <defs>
+                <filter id="neonGlow-${node.id}" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="3.5" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <!-- Silueta externa de la Neurona -->
+              <path d="${NEURON_SVG_PATH}" fill="#06030e" stroke="${strokeColor}" stroke-width="3" stroke-linejoin="round" filter="url(#neonGlow-${node.id})"/>
+
+              <!-- Núcleo con borde neón -->
+              <circle cx="100" cy="100" r="35" fill="#06030e" stroke="${strokeColor}" stroke-width="3" filter="url(#neonGlow-${node.id})"/>
+
+              <!-- FOTOGRAMA 1: Ojos Abiertos -->
+              <g class="neuron-eyes-open" style="animation-delay: ${delay}s">
+                <ellipse cx="86" cy="93" rx="5.5" ry="7.5" fill="#ffffff" transform="rotate(-8 86 93)"/>
+                <path d="M 81 87 Q 76 81 74 84" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round"/>
+                
+                <ellipse cx="114" cy="93" rx="5.5" ry="7.5" fill="#ffffff" transform="rotate(8 114 93)"/>
+                <path d="M 119 87 Q 124 81 126 84" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+                <path d="M 91 104 Q 100 115 109 104 Q 100 106 91 104 Z" fill="#ffffff"/>
+              </g>
+
+              <!-- FOTOGRAMA 2: Ojos Entrecerrados -->
+              <g class="neuron-eyes-half" style="animation-delay: ${delay}s">
+                <ellipse cx="86" cy="94" rx="5.5" ry="3.5" fill="#ffffff"/>
+                <path d="M 80 92 Q 76 88 74 90" stroke="#ffffff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                
+                <ellipse cx="114" cy="94" rx="5.5" ry="3.5" fill="#ffffff"/>
+                <path d="M 120 92 Q 124 88 126 90" stroke="#ffffff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+                <path d="M 92 104 Q 100 112 108 104 Z" fill="#ffffff"/>
+              </g>
+
+              <!-- FOTOGRAMA 3: Ojos Cerrados -->
+              <g class="neuron-eyes-closed" style="animation-delay: ${delay}s">
+                <path d="M 79 95 Q 86 86 93 95" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <path d="M 79 95 Q 75 91 73 93" stroke="#ffffff" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+                <path d="M 107 95 Q 114 86 121 95" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <path d="M 121 95 Q 125 91 127 93" stroke="#ffffff" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+                <path d="M 92 104 Q 100 113 108 104 Z" fill="#ffffff"/>
+              </g>
+            </svg>
+
+            ${drawingsVignettesHtml}
+
+            ${node.audioData ? `<div class="neuron-audio-badge absolute w-6 h-6 rounded-full bg-cyan-500/90 border border-cyan-200 flex items-center justify-center shadow text-[10px] text-white z-20"><i class="fa-solid fa-music"></i></div>` : ''}
+          </div>
+
+          <div class="neuron-title px-3 py-1 rounded-full glass-card border border-slate-700/60 text-xs font-semibold text-slate-200 whitespace-nowrap shadow-lg flex items-center gap-1.5">
+            <span>${node.title}</span>
+          </div>
+          <div class="neuron-meta text-[10px] text-pink-400 font-medium opacity-80 flex items-center gap-1">
+            <i class="fa-solid fa-location-dot"></i> ${node.country ? `${node.country} · ` : ''}${node.place}
+          </div>
+          ${node.author ? `<div class="neuron-author text-[10px] text-slate-400">Por ${node.author}</div>` : ''}
+        `;
+        sea.appendChild(div);
+      });
+
+      updateStats();
+    };
+
+    const motionClock = new Map();
+    function animateNeurons(time) {
+      const sea = document.getElementById('memorySea');
+      const bounds = sea.getBoundingClientRect();
+      const nodes = [...document.querySelectorAll('.neuron-node[data-node-id]')].map(el => {
+        const node = window.memories.find(item => String(item.id) === String(el.dataset.nodeId));
+        if (!node) return null;
+        if (!motionClock.has(node.id)) motionClock.set(node.id, {
+          phase: Math.random() * 6.28, speed: .00035 + Math.random() * .00025,
+          x: node.x, y: node.y, vx: (Math.random() - .5) * .008, vy: (Math.random() - .5) * .008
+        });
+        const m = motionClock.get(node.id);
+        const t = time * m.speed + m.phase;
+        m.vx += Math.sin(t) * .00018; m.vy += Math.cos(t * .83) * .00018;
+        const speed = Math.hypot(m.vx, m.vy);
+        if (speed > .018) { m.vx *= .018 / speed; m.vy *= .018 / speed; }
+        m.x += m.vx; m.y += m.vy;
+        if (m.x < 9 || m.x > 91) { m.vx *= -1; m.x = Math.max(9, Math.min(91, m.x)); }
+        if (m.y < 16 || m.y > 84) { m.vy *= -1; m.y = Math.max(16, Math.min(84, m.y)); }
+        return { el, m };
+      }).filter(Boolean);
+
+      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        const dx = (b.m.x - a.m.x) * bounds.width / 100, dy = (b.m.y - a.m.y) * bounds.height / 100;
+        const distance = Math.hypot(dx, dy) || 1;
+        const minDistance = Math.max(a.el.offsetWidth, b.el.offsetWidth) * .78;
+        if (distance < minDistance) {
+          const push = (minDistance - distance) / minDistance * .018;
+          const nx = dx / distance, ny = dy / distance;
+          const relativeVelocity = (b.m.vx - a.m.vx) * nx + (b.m.vy - a.m.vy) * ny;
+          if (relativeVelocity < 0) {
+            a.m.vx += nx * relativeVelocity; a.m.vy += ny * relativeVelocity;
+            b.m.vx -= nx * relativeVelocity; b.m.vy -= ny * relativeVelocity;
+          }
+          a.m.vx -= nx * push; a.m.vy -= ny * push;
+          b.m.vx += nx * push; b.m.vy += ny * push;
+          a.m.x -= nx * push * 2; a.m.y -= ny * push * 2;
+          b.m.x += nx * push * 2; b.m.y += ny * push * 2;
+        }
+      }
+      nodes.forEach(({ el, m }) => {
+        el.style.left = `${m.x}%`; el.style.top = `${m.y}%`;
+      });
+      document.querySelectorAll('#synapseSvg path[data-from]').forEach(path => {
+        const a = document.querySelector(`[data-node-id="${path.dataset.from}"]`);
+        const b = document.querySelector(`[data-node-id="${path.dataset.to}"]`);
+        if (!a || !b) return;
+        const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect(), sr = sea.getBoundingClientRect();
+        const x1 = ar.left + ar.width / 2 - sr.left, y1 = ar.top + ar.height / 2 - sr.top;
+        const x2 = br.left + br.width / 2 - sr.left, y2 = br.top + br.height / 2 - sr.top;
+        const dx = x2 - x1, dy = y2 - y1;
+        path.setAttribute('d', `M ${x1} ${y1} Q ${(x1+x2)/2-dy*.2} ${(y1+y2)/2+dx*.2} ${x2} ${y2}`);
+      });
+      requestAnimationFrame(animateNeurons);
+    }
+    requestAnimationFrame(animateNeurons);
+
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+    let drawTool = 'brush';
+
+    function resizeCanvas() {
+      const parent = canvas.parentElement;
+      const old = document.createElement('canvas');
+      old.width = canvas.width; old.height = canvas.height;
+      if (old.width && old.height) old.getContext('2d').drawImage(canvas, 0, 0);
+      canvas.width = Math.max(320, parent.clientWidth * 2);
+      canvas.height = Math.max(240, parent.clientWidth * 1.5 * 2);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (old.width && old.height) ctx.drawImage(old, 0, 0, canvas.width, canvas.height);
+    }
+
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      let clientX = e.clientX, clientY = e.clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+      return { x: (clientX - rect.left) * canvas.width / rect.width, y: (clientY - rect.top) * canvas.height / rect.height };
+    }
+
+    function setDrawTool(tool) {
+      drawTool = tool;
+      document.querySelectorAll('.draw-tool').forEach(btn => btn.classList.remove('tool-active'));
+      document.getElementById(`tool${tool[0].toUpperCase()}${tool.slice(1)}`)?.classList.add('tool-active');
+    }
+    function startDraw(e) {
+      e.preventDefault(); const pos = getCanvasPos(e);
+      if (drawTool === 'fill') { floodFill(Math.floor(pos.x), Math.floor(pos.y)); return; }
+      isDrawing = true; [lastX, lastY] = [pos.x, pos.y];
+    }
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getCanvasPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = drawTool === 'eraser' ? '#ffffff' : document.getElementById('brushColor').value;
+      ctx.lineWidth = document.getElementById('brushSize').value * 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      [lastX, lastY] = [pos.x, pos.y];
+    }
+    function stopDraw() { isDrawing = false; }
+    function clearCanvas() { ctx.save(); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore(); }
+    function floodFill(x, y) {
+      const image = ctx.getImageData(0, 0, canvas.width, canvas.height), data = image.data;
+      const at = (x, y) => (y * canvas.width + x) * 4;
+      if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
+      const start = at(x, y), target = [data[start], data[start+1], data[start+2], data[start+3]];
+      const color = document.getElementById('brushColor').value.match(/[a-f\\d]{2}/gi).map(v => parseInt(v, 16)).concat(255);
+      if (target.every((v, i) => v === color[i])) return;
+      const stack = [[x, y]], seen = new Uint8Array(canvas.width * canvas.height);
+      while (stack.length) { const [px, py] = stack.pop(); if (px < 0 || py < 0 || px >= canvas.width || py >= canvas.height) continue; const idx = py * canvas.width + px; if (seen[idx]) continue; const p = at(px, py); if (Math.abs(data[p]-target[0])+Math.abs(data[p+1]-target[1])+Math.abs(data[p+2]-target[2]) > 24) continue; seen[idx] = 1; data[p]=color[0]; data[p+1]=color[1]; data[p+2]=color[2]; data[p+3]=255; stack.push([px+1,py],[px-1,py],[px,py+1],[px,py-1]); }
+      ctx.putImageData(image, 0, 0);
+    }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('touchstart', startDraw);
+    canvas.addEventListener('touchmove', draw);
+    window.addEventListener('touchend', stopDraw);
+
+    function openModal(id) { 
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('hidden'); 
+    }
+
+    function closeModal(id) { 
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.add('hidden'); 
+    }
+
+    function openCreateMemoryModal() {
+      const titleInput = document.getElementById('inputMemoryTitle');
+      const authorInput = document.getElementById('inputMemoryAuthor');
+      const placeInput = document.getElementById('inputMemoryPlace');
+      const countryInput = document.getElementById('inputMemoryCountry');
+      const audioInput = document.getElementById('inputMemoryAudio');
+      const previewContainer = document.getElementById('modalAudioPreviewContainer');
+      const previewAudio = document.getElementById('modalAudioPreview');
+
+      if (titleInput) titleInput.value = '';
+      if (authorInput) authorInput.value = '';
+      if (placeInput) placeInput.value = '';
+      if (countryInput) countryInput.value = '';
+      if (audioInput) audioInput.value = '';
+      if (previewAudio) previewAudio.src = '';
+      if (previewContainer) previewContainer.classList.add('hidden');
+      selectedAudioBase64 = null;
+      selectedAudioFile = null;
+
+      openModal('createMemoryModal');
+    }
+
+    async function handleSaveMemory(e) {
+      e.preventDefault();
+      const title = document.getElementById('inputMemoryTitle').value.trim();
+      const place = document.getElementById('inputMemoryPlace').value.trim();
+      const country = document.getElementById('inputMemoryCountry').value;
+      const author = document.getElementById('inputMemoryAuthor').value.trim();
+      const aura = document.querySelector('input[name="auraColor"]:checked')?.value || 'cyan';
+
+      if (!title || !place || !country || !author) return;
+
+      const newMemory = {
+        id: Date.now(),
+        title,
+        author,
+        place,
+        country,
+        aura,
+        x: Math.floor(Math.random() * 70) + 15,
+        y: Math.floor(Math.random() * 60) + 20,
+        audioData: null,
+        neuronImage: ({ purple: 'n1.webp', emerald: 'n2.webp', amber: 'n3.webp', cyan: 'n4.webp' })[aura] || 'n4.webp',
+        drawings: []
+      };
+
+      if (!Array.isArray(window.memories)) {
+        window.memories = [];
+      }
+
+      if (selectedAudioFile) {
+        try {
+          if (window.cloudConnected) showToast('Subiendo audio…');
+          newMemory.audioData = await window.uploadMemoryAudio(selectedAudioFile, newMemory.id);
+        } catch (error) {
+          console.error('Error subiendo audio:', error);
+          newMemory.audioData = URL.createObjectURL(selectedAudioFile);
+          showToast('Audio disponible solo durante esta sesión local.');
+        }
+      }
+
+      window.memories.push(newMemory);
+      
+      if (window.saveMemoryToCloud) {
+        window.saveMemoryToCloud(newMemory);
+      } else {
+        saveState();
+      }
+
+      if (typeof window.updateLocationFilterOptions === 'function') {
+        window.updateLocationFilterOptions();
+      }
+      if (typeof window.renderNeuralMap === 'function') {
+        window.renderNeuralMap();
+      }
+      closeModal('createMemoryModal');
+      showToast("¡Nuevo recuerdo sembrado en la red!");
+    }
+
+    function openMemoryBoard(nodeId, focusIndex = null) {
+      activeNodeId = nodeId;
+      const node = window.memories.find(m => m.id === nodeId);
+      if (!node) return;
+
+      document.getElementById('boardNodeTitle').innerText = node.title;
+      document.getElementById('boardNodePlace').innerText = `${node.country ? node.country + ' · ' : ''}${node.place}${node.author ? ' · ' + node.author : ''}`;
+
+      // Reproductor de Audio con Autoplay
+      const audioContainer = document.getElementById('boardNodeAudioContainer');
+      const audioEl = document.getElementById('boardNodeAudio');
+      if (node.audioData) {
+        audioEl.src = node.audioData;
+        audioContainer.classList.remove('hidden');
+        audioEl.pause();
+        audioEl.currentTime = 0;
+      } else {
+        audioEl.pause();
+        audioEl.src = "";
+        audioContainer.classList.add('hidden');
+      }
+
+      // Galería y Visualizador de Trazos
+      const gallery = document.getElementById('nodeGalleryGrid');
+      gallery.innerHTML = '';
+      if (node.drawings && node.drawings.length > 0) {
+        node.drawings.forEach((dataUrl, idx) => {
+          const img = document.createElement('img');
+          const isFocused = focusIndex === idx;
+          img.className = `h-14 w-20 object-cover rounded-lg border-2 ${isFocused ? 'border-cyanGlow scale-105' : 'border-cyanGlow/40'} bg-white shadow cursor-pointer hover:border-cyanGlow transition`;
+          img.src = dataUrl;
+          img.title = `Trazo ${idx + 1}`;
+          img.onclick = () => selectGalleryDrawing(dataUrl, idx);
+          gallery.appendChild(img);
+        });
+
+        if (focusIndex !== null && node.drawings[focusIndex]) {
+          selectGalleryDrawing(node.drawings[focusIndex], focusIndex);
+        } else {
+          closeDrawingPreview();
+        }
+      } else {
+        gallery.innerHTML = `<span class="text-xs text-slate-500 italic">No hay trazos compartidos aún.</span>`;
+        closeDrawingPreview();
+      }
+
+      openModal('memoryBoardModal');
+      setTimeout(resizeCanvas, 50);
+    }
+
+    function playNodeAudio() {
+      const audio = document.getElementById('boardNodeAudio');
+      if (!audio?.src) return showToast('Esta neurona no tiene audio para reproducir.');
+      audio.play().catch(() => showToast('No se pudo reproducir el audio.'));
+    }
+
+    function stopNodeAudio() {
+      const audio = document.getElementById('boardNodeAudio');
+      if (!audio) return;
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    function selectGalleryDrawing(dataUrl, idx) {
+      const previewBox = document.getElementById('boardDrawingPreviewBox');
+      const previewImg = document.getElementById('boardDrawingPreviewImg');
+      if (previewBox && previewImg) {
+        previewImg.src = dataUrl;
+        previewBox.classList.remove('hidden');
+      }
+      const galleryImgs = document.querySelectorAll('#nodeGalleryGrid img');
+      galleryImgs.forEach((img, i) => {
+        if (i === idx) {
+          img.classList.add('border-cyanGlow', 'scale-105');
+          img.classList.remove('border-cyanGlow/40');
+        } else {
+          img.classList.remove('border-cyanGlow', 'scale-105');
+          img.classList.add('border-cyanGlow/40');
+        }
+      });
+    }
+
+    function closeDrawingPreview() {
+      const previewBox = document.getElementById('boardDrawingPreviewBox');
+      if (previewBox) previewBox.classList.add('hidden');
+    }
+
+    function saveDrawingToNode() {
+      const node = window.memories.find(m => m.id === activeNodeId);
+      if (node) {
+        if (!node.drawings) node.drawings = [];
+        
+        // Crear versión optimizada liviana (~15KB) para Firestore
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 240;
+        tempCanvas.height = 180;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.fillRect(0, 0, 240, 180);
+        tempCtx.drawImage(canvas, 0, 0, 240, 180);
+        
+        const compressedImage = tempCanvas.toDataURL('image/jpeg', 0.6);
+        node.drawings.push(compressedImage);
+        
+        if (window.saveMemoryToCloud) {
+          window.saveMemoryToCloud(node);
+        } else {
+          saveState();
+        }
+
+        showToast("¡Trazo subconsciente guardado y compartido!");
+        window.renderNeuralMap();
+        clearCanvas();
+        openMemoryBoard(node.id);
+      }
+    }
+
+    function filterMemories() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const filterCountry = document.getElementById('countryFilter').value;
+
+      const filtered = window.memories.filter(m => {
+        const matchesText = m.title.toLowerCase().includes(search) || m.place.toLowerCase().includes(search) || (m.country || '').toLowerCase().includes(search);
+        const matchesCountry = filterCountry === 'ALL' || (m.country || '').toLowerCase() === filterCountry.toLowerCase();
+        return matchesText && matchesCountry;
+      });
+
+      window.renderNeuralMap(filtered);
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'glass-card border border-cyanGlow/40 px-4 py-2.5 rounded-2xl text-xs font-semibold text-slate-100 shadow-xl flex items-center gap-2 animate-bounce';
+      toast.innerHTML = `<i class="fa-solid fa-circle-info text-cyanGlow"></i> ${msg}`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3200);
+    }
+
+    window.addEventListener('resize', () => { initSpaceCanvas(); window.renderNeuralMap(); });
+    window.onload = () => { 
+      initSpaceCanvas(); 
+      animateSpaceParticles(); 
+      loadCountryOptions();
+      window.updateLocationFilterOptions();
+      window.renderNeuralMap(); 
+    };
+  </script>
+</body>
+</html>
