@@ -70,6 +70,9 @@
     .neon-green { filter: drop-shadow(0 0 7px rgba(52,211,153,.65)) drop-shadow(0 0 18px rgba(16,185,129,.85)) drop-shadow(0 0 32px rgba(52,211,153,.9)); }
     .neon-yellow { filter: drop-shadow(0 0 7px rgba(255,215,0,.65)) drop-shadow(0 0 18px rgba(218,165,32,.85)) drop-shadow(0 0 32px rgba(255,215,0,.9)); }
     .neon-blue { filter: drop-shadow(0 0 7px rgba(0,191,255,.65)) drop-shadow(0 0 18px rgba(30,144,255,.85)) drop-shadow(0 0 32px rgba(0,119,255,.9)); }
+    .neon-red { filter: grayscale(1) sepia(1) saturate(8) hue-rotate(305deg) drop-shadow(0 0 7px rgba(248,70,70,.65)) drop-shadow(0 0 18px rgba(220,38,38,.85)) drop-shadow(0 0 32px rgba(185,28,28,.9)); }
+    .logo-halo { position: relative; isolation: isolate; }
+    .logo-halo::before { content: ''; position: absolute; inset: 12% -8%; z-index: -1; border-radius: 999px; background: linear-gradient(90deg, rgba(34,211,238,.9), rgba(168,85,247,.9)); filter: blur(24px); opacity: .75; }
     @keyframes neuronWobble { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-8px) rotate(1.5deg); } }
     #memorySea.dense-1 .neuron-node { --neuron-size: clamp(120px, 14vw, 185px); }
     #memorySea.dense-2 .neuron-node { --neuron-size: clamp(96px, 11vw, 145px); }
@@ -182,8 +185,8 @@
 
 	  <header class="fixed top-0 left-0 w-full z-30 p-4 md:p-6 pointer-events-none flex items-center justify-start bg-gradient-to-b from-space-900/90 via-space-900/40 to-transparent">
 		
-		  <div class="pointer-events-auto flex items-center gap-3">
-		  <img src="Logocolor.png" alt="El Mar de la Memoria" class="h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_16px_rgba(56,189,248,.45)]">
+		  <div class="logo-halo pointer-events-auto flex items-center gap-3">
+		  <img src="Logocolor.png" alt="El Mar de la Memoria" class="h-16 md:h-20 w-auto object-contain">
 		</div>
 
 	  </header>
@@ -298,7 +301,7 @@
           <label class="block text-xs font-semibold text-cyanGlow mb-1.5 flex items-center gap-1.5">
             <i class="fa-solid fa-file-audio text-cyanGlow"></i> Archivo de Audio
           </label>
-          <input type="file" id="inputMemoryAudio" accept="audio/*" onchange="handleAudioSelect(event)"
+          <input type="file" id="inputMemoryAudio" accept="audio/*" required onchange="handleAudioSelect(event)"
                  class="w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer bg-space-900/90 border border-slate-700/80 rounded-xl p-2 focus:outline-none focus:border-cyanGlow transition">
           <div id="modalAudioPreviewContainer" class="hidden mt-3 p-3 rounded-xl bg-space-900/90 border border-cyanGlow/30">
             <p class="text-[11px] text-cyan-300 mb-1.5 font-medium flex items-center gap-1">
@@ -330,6 +333,11 @@
               <input type="radio" name="auraColor" value="emerald" class="hidden peer">
               <span class="w-4 h-4 rounded-full bg-emerald-400 ring-2 ring-transparent peer-checked:ring-white"></span>
               <span class="text-xs text-slate-300">Verde</span>
+            </label>
+            <label class="cursor-pointer border border-slate-700 rounded-xl p-2.5 flex items-center justify-center gap-2 hover:bg-slate-800/50">
+              <input type="radio" name="auraColor" value="red" class="hidden peer">
+              <span class="w-4 h-4 rounded-full bg-red-500 ring-2 ring-transparent peer-checked:ring-white"></span>
+              <span class="text-xs text-slate-300">Rojo</span>
             </label>
           </div>
         </div>
@@ -428,18 +436,17 @@
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
     // Configuración exacta extraída de tu consola de Firebase
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'mardelamemoria-52500';
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'mardememorias-b18a6';
     const firebaseConfig = typeof __firebase_config !== 'undefined'
       ? JSON.parse(__firebase_config)
       : {
-          apiKey: "AIzaSyAFtob3a2qJl0_2uVaMeiQo82VrtcHuZwQ",
-          authDomain: "mardelamemoria-52500.firebaseapp.com",
-          databaseURL: "https://mardelamemoria-52500-default-rtdb.firebaseio.com",
-          projectId: "mardelamemoria-52500",
-          storageBucket: "mardelamemoria-52500.firebasestorage.app",
-          messagingSenderId: "701225160999",
-          appId: "1:701225160999:web:b828e3b4ed241e7c8fd902",
-          measurementId: "G-3FKC26B7TT"
+          apiKey: "AIzaSyDUA2OL1p9rZFK21lVOjeHQSOrdkc--V5s",
+		  authDomain: "mardememorias-b18a6.firebaseapp.com",
+		  projectId: "mardememorias-b18a6",
+		  storageBucket: "mardememorias-b18a6.firebasestorage.app",
+		  messagingSenderId: "1077096175591",
+		  appId: "1:1077096175591:web:b86d27085a16210ebd4f42",
+		  measurementId: "G-H1BJE5CEEE"
         };
 
     const app = initializeApp(firebaseConfig);
@@ -1039,7 +1046,7 @@
               path.setAttribute('d', `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`);
               path.setAttribute('class', 'synapse-path synapse-pulse');
 
-              const strokeColor = n1.aura === 'purple' ? '#a855f7' : 
+              const strokeColor = n1.aura === 'purple' ? '#a855f7' : n1.aura === 'red' ? '#ef4444' : 
                                  n1.aura === 'amber' ? '#fbbf24' : 
                                  n1.aura === 'emerald' ? '#34d399' : '#38bdf8';
               path.setAttribute('stroke', strokeColor);
@@ -1061,10 +1068,10 @@
           openMemoryBoard(node.id);
         };
 
-        const strokeColor = node.aura === 'purple' ? '#c084fc' : 
+        const strokeColor = node.aura === 'purple' ? '#c084fc' : node.aura === 'red' ? '#f87171' : 
                             node.aura === 'amber' ? '#fbbf24' : 
                             node.aura === 'emerald' ? '#34d399' : '#38bdf8';
-        const neonClass = node.aura === 'purple' ? 'neon-purple' : node.aura === 'amber' ? 'neon-yellow' : node.aura === 'emerald' ? 'neon-green' : 'neon-blue';
+        const neonClass = node.aura === 'purple' ? 'neon-purple' : node.aura === 'amber' ? 'neon-yellow' : node.aura === 'emerald' ? 'neon-green' : node.aura === 'red' ? 'neon-red' : 'neon-blue';
 
         const delay = (Math.random() * 3.5).toFixed(2);
 
@@ -1087,7 +1094,7 @@
 
         div.innerHTML = `
           <div class="neuron-visual relative flex items-center justify-center transition group-hover:scale-110 duration-300">
-            <img src="${node.neuronImage || 'n1.webp'}" alt="Neurona ${node.title}" class="neon-image ${neonClass} w-full h-full object-contain" onerror="this.src='n1.webp'">
+            <img src="${node.neuronImage || 'n1.webp'}" alt="Neurona ${node.title}" class="neon-image ${neonClass} w-full h-full object-contain" onerror="this.onerror=null;this.src='n4.webp'">
             <svg viewBox="0 0 200 200" class="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
               <defs>
                 <filter id="neonGlow-${node.id}" x="-30%" y="-30%" width="160%" height="160%">
@@ -1327,6 +1334,10 @@
       const aura = document.querySelector('input[name="auraColor"]:checked')?.value || 'cyan';
 
       if (!title || !place || !country || !author) return;
+      if (!selectedAudioFile) {
+        showToast('Debes subir un audio para añadir la neurona.');
+        return;
+      }
 
       const newMemory = {
         id: Date.now(),
@@ -1338,7 +1349,7 @@
         x: Math.floor(Math.random() * 70) + 15,
         y: Math.floor(Math.random() * 60) + 20,
         audioData: null,
-        neuronImage: ({ purple: 'n1.webp', emerald: 'n2.webp', amber: 'n3.webp', cyan: 'n4.webp' })[aura] || 'n4.webp',
+        neuronImage: ({ purple: 'n1.webp', emerald: 'n2.webp', amber: 'n3.webp', cyan: 'n4.webp', red: 'n5.webp' })[aura] || 'n4.webp',
         drawings: []
       };
 
