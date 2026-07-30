@@ -77,12 +77,22 @@
     #memorySea.dense-1 .neuron-node { --neuron-size: clamp(120px, 14vw, 185px); }
     #memorySea.dense-2 .neuron-node { --neuron-size: clamp(96px, 11vw, 145px); }
     .neuron-node .neuron-visual { width: var(--neuron-size); height: var(--neuron-size); }
-    .neuron-title { margin-top: -0.30rem; position: relative; z-index: 2; }
-    .neuron-meta { margin-top: -0.15rem; position: relative; z-index: 2; }
-    .neuron-author { margin-top: -0.1rem; position: relative; z-index: 2; }
+    .neuron-title { margin-top: -0.9rem; position: relative; z-index: 2; }
+    .neuron-meta { margin-top: -0.3rem; position: relative; z-index: 2; }
+    .neuron-author { margin-top: -0.2rem; position: relative; z-index: 2; }
     .neuron-audio-badge { right: 0.35rem; bottom: 0.35rem; }
     .waves-overlay { opacity: .55; mix-blend-mode: screen; }
     .draw-stage { aspect-ratio: 4 / 3; width: min(100%, 760px); height: auto; min-height: 0; flex: 0 0 auto; margin-inline: auto; }
+    .drawing-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: .75rem; align-items: start; min-height: 0; }
+    .drawing-workspace > .flex-grow { grid-column: 1; grid-row: 1; min-width: 0; }
+    .drawing-preview-side { grid-column: 2; grid-row: 1; width: 100%; margin: 0; min-width: 0; }
+    .drawing-preview-side img { width: 100%; max-height: 180px; object-fit: contain; }
+    @media (max-width: 640px) {
+      .drawing-workspace { grid-template-columns: 1fr; }
+      .drawing-workspace > .flex-grow { grid-column: 1; grid-row: 1; }
+      .drawing-preview-side { grid-column: 1; grid-row: 2; }
+      .drawing-preview-side img { max-height: 110px; }
+    }
     #drawingCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
     .tool-active { color: #fff !important; background: rgba(56,189,248,.3) !important; border-color: rgba(56,189,248,.8) !important; }
 
@@ -342,7 +352,7 @@
           </div>
         </div>
 
-        <button type="submit" 
+        <button type="submit" id="btnSaveMemory"
                 class="w-full mt-2 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/20 transition active:scale-98">
           <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Añadir tu recuerdo
         </button>
@@ -376,8 +386,9 @@
         <audio id="boardNodeAudio" controls class="w-full h-10 rounded-xl"></audio>
       </div>
 
+      <div class="drawing-workspace">
       <!-- Preview / Visor de Trazo Seleccionado -->
-      <div id="boardDrawingPreviewBox" class="hidden my-2 p-3 rounded-2xl bg-space-900/90 border border-cyanGlow/40 relative flex flex-col items-center shadow-lg">
+      <div id="boardDrawingPreviewBox" class="drawing-preview-side hidden my-2 p-3 rounded-2xl bg-space-900/90 border border-cyanGlow/40 relative flex flex-col items-center shadow-lg">
         <button onclick="closeDrawingPreview()" class="absolute top-2 right-2 text-slate-400 hover:text-white text-xs bg-space-800 rounded-full w-6 h-6 flex items-center justify-center transition">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -408,6 +419,7 @@
         <div class="relative draw-stage bg-white rounded-2xl overflow-hidden shadow-inner">
           <canvas id="drawingCanvas" class="w-full h-full cursor-crosshair touch-none"></canvas>
         </div>
+      </div>
       </div>
 
       <!-- Gallery -->
@@ -1069,6 +1081,7 @@
                             node.aura === 'amber' ? '#fbbf24' : 
                             node.aura === 'emerald' ? '#34d399' : '#38bdf8';
         const neonClass = node.aura === 'purple' ? 'neon-purple' : node.aura === 'amber' ? 'neon-yellow' : node.aura === 'emerald' ? 'neon-green' : node.aura === 'red' ? 'neon-red' : 'neon-blue';
+        const nodeImage = node.aura === 'red' ? 'n5.webp' : (node.neuronImage || 'n1.webp');
 
         const delay = (Math.random() * 3.5).toFixed(2);
 
@@ -1091,7 +1104,7 @@
 
         div.innerHTML = `
           <div class="neuron-visual relative flex items-center justify-center transition group-hover:scale-110 duration-300">
-            <img src="${node.neuronImage || 'n1.webp'}" alt="Neurona ${node.title}" class="neon-image ${neonClass} w-full h-full object-contain" onerror="this.onerror=null;this.src='n4.webp'">
+            <img src="${nodeImage}" alt="Neurona ${node.title}" class="neon-image ${neonClass} w-full h-full object-contain">
             <svg viewBox="0 0 200 200" class="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
               <defs>
                 <filter id="neonGlow-${node.id}" x="-30%" y="-30%" width="160%" height="160%">
@@ -1346,6 +1359,11 @@
       if (previewContainer) previewContainer.classList.add('hidden');
       selectedAudioBase64 = null;
       selectedAudioFile = null;
+      const saveButton = document.getElementById('btnSaveMemory');
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i> Añadir tu recuerdo';
+      }
 
       openModal('createMemoryModal');
     }
@@ -1378,6 +1396,14 @@
         drawings: []
       };
 
+      const saveButton = document.getElementById('btnSaveMemory');
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Añadiendo…';
+      }
+      closeModal('createMemoryModal');
+      showToast('Añadiendo tu recuerdo; el audio se está cargando…');
+
       if (!Array.isArray(window.memories)) {
         window.memories = [];
       }
@@ -1407,7 +1433,10 @@
       if (typeof window.renderNeuralMap === 'function') {
         window.renderNeuralMap();
       }
-      closeModal('createMemoryModal');
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i> Añadir tu recuerdo';
+      }
       showToast("¡Nuevo recuerdo sembrado en la red!");
     }
 
