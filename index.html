@@ -82,7 +82,7 @@
     .neuron-author { margin-top: -0.1rem; position: relative; z-index: 2; }
     .neuron-audio-badge { right: 0.35rem; bottom: 0.35rem; }
     .waves-overlay { opacity: .55; mix-blend-mode: screen; }
-    .draw-stage { aspect-ratio: 4 / 3; width: min(100%, 760px); margin-inline: auto; }
+    .draw-stage { aspect-ratio: 4 / 3; width: min(100%, 760px); height: auto; min-height: 0; flex: 0 0 auto; margin-inline: auto; }
     #drawingCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
     .tool-active { color: #fff !important; background: rgba(56,189,248,.3) !important; border-color: rgba(56,189,248,.8) !important; }
 
@@ -418,9 +418,6 @@
 
       <!-- Buttons Footer -->
       <div class="pt-2 flex gap-2">
-        <button onclick="synthesizeAIReflection()" class="px-4 py-2.5 rounded-xl bg-purple-900/60 border border-purple-500/40 text-purple-200 text-xs font-semibold hover:bg-purple-800/80 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-sparkles text-purple-400"></i> Generar Poema IA
-        </button>
         <button onclick="saveDrawingToNode()" 
                 class="flex-grow py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-semibold text-xs md:text-sm shadow-lg transition active:scale-98">
           <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> Compartir mi Trazo
@@ -1228,16 +1225,31 @@
     let isDrawing = false;
     let lastX = 0, lastY = 0;
     let drawTool = 'brush';
+    const DRAWING_WIDTH = 1200;
+    const DRAWING_HEIGHT = 900;
+    let drawingHistory = [];
 
     function resizeCanvas() {
       const parent = canvas.parentElement;
       const old = document.createElement('canvas');
       old.width = canvas.width; old.height = canvas.height;
       if (old.width && old.height) old.getContext('2d').drawImage(canvas, 0, 0);
-      canvas.width = Math.max(320, parent.clientWidth * 2);
-      canvas.height = Math.max(240, parent.clientWidth * 1.5 * 2);
+      canvas.width = DRAWING_WIDTH;
+      canvas.height = DRAWING_HEIGHT;
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       if (old.width && old.height) ctx.drawImage(old, 0, 0, canvas.width, canvas.height);
+      drawingHistory = [ctx.getImageData(0, 0, canvas.width, canvas.height)];
+    }
+
+    function saveDrawingHistory() {
+      drawingHistory.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+      if (drawingHistory.length > 20) drawingHistory.shift();
+    }
+
+    function undoDrawing() {
+      if (drawingHistory.length < 2) return;
+      drawingHistory.pop();
+      ctx.putImageData(drawingHistory[drawingHistory.length - 1], 0, 0);
     }
 
     function getCanvasPos(e) {
@@ -1257,7 +1269,7 @@
     }
     function startDraw(e) {
       e.preventDefault(); const pos = getCanvasPos(e);
-      if (drawTool === 'fill') { floodFill(Math.floor(pos.x), Math.floor(pos.y)); return; }
+      if (drawTool === 'fill') { floodFill(Math.floor(pos.x), Math.floor(pos.y)); saveDrawingHistory(); return; }
       isDrawing = true; [lastX, lastY] = [pos.x, pos.y];
     }
     function draw(e) {
@@ -1272,14 +1284,21 @@
       ctx.stroke();
       [lastX, lastY] = [pos.x, pos.y];
     }
-    function stopDraw() { isDrawing = false; }
-    function clearCanvas() { ctx.save(); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore(); }
+    function stopDraw() {
+      if (isDrawing) saveDrawingHistory();
+      isDrawing = false;
+    }
+    function clearCanvas() {
+      ctx.save(); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore();
+      saveDrawingHistory();
+    }
     function floodFill(x, y) {
       const image = ctx.getImageData(0, 0, canvas.width, canvas.height), data = image.data;
       const at = (x, y) => (y * canvas.width + x) * 4;
       if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
       const start = at(x, y), target = [data[start], data[start+1], data[start+2], data[start+3]];
-      const color = document.getElementById('brushColor').value.match(/[a-f\\d]{2}/gi).map(v => parseInt(v, 16)).concat(255);
+      const hex = document.getElementById('brushColor').value.replace('#', '');
+      const color = [0, 2, 4].map(index => parseInt(hex.slice(index, index + 2), 16)).concat(255);
       if (target.every((v, i) => v === color[i])) return;
       const stack = [[x, y]], seen = new Uint8Array(canvas.width * canvas.height);
       while (stack.length) { const [px, py] = stack.pop(); if (px < 0 || py < 0 || px >= canvas.width || py >= canvas.height) continue; const idx = py * canvas.width + px; if (seen[idx]) continue; const p = at(px, py); if (Math.abs(data[p]-target[0])+Math.abs(data[p+1]-target[1])+Math.abs(data[p+2]-target[2]) > 24) continue; seen[idx] = 1; data[p]=color[0]; data[p+1]=color[1]; data[p+2]=color[2]; data[p+3]=255; stack.push([px+1,py],[px-1,py],[px,py+1],[px,py-1]); }
@@ -1292,6 +1311,12 @@
     canvas.addEventListener('touchstart', startDraw);
     canvas.addEventListener('touchmove', draw);
     window.addEventListener('touchend', stopDraw);
+    document.addEventListener('keydown', event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        undoDrawing();
+      }
+    });
 
     function openModal(id) { 
       const modal = document.getElementById(id);
